@@ -1,12 +1,31 @@
 local loc_stuff = {
   descriptions = {
     Back = {
+	  b_zero_sparkling = {
+        name = "Sparkling Deck",
+        text = {
+            "Start run with only a",
+            "full set of {V:1}Brights{},",
+			"{C:blue}-2{} Hands every round"
+        }
+      },
 	  b_zero_draft = {
         name = "Draft Deck",
         text = {
             "Start run by choosing",
             "{C:attention}1{} of {C:attention}6 Eternal",
 			"starting Jokers"
+        }
+      },
+	  b_zero_divine = {
+        name = "Divine Deck",
+        text = {
+            "Start run by choosing",
+            "a {C:patron}Patron Joker"
+        },
+		unlock = {
+            "{C:attention}Unlock{} a",
+            "{C:patron}Patron Joker",
         }
       },
       b_zero_bejeweled = {
@@ -1551,6 +1570,21 @@ local loc_stuff = {
             "in hand or play",
         },
       },
+	  j_zero_mizzo = {
+        name = {"Mizzo, the Schwarzschild",
+				"{s:0.5}Maiden of Black Holes"},
+        text = {
+			"Using a {C:planet}Planet{} card {C:attention}upgrades",
+			"the hand an extra number of ",
+			"times equal to how many times",
+			"it was used this run"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Jokerless",
+            "challenge"
+        }
+      },
 	  j_zero_soshi = {
         name = "Soshi",
         text = {
@@ -2562,6 +2596,7 @@ local loc_stuff = {
 	challenge_names = {
 		c_zero_alpine_garden = "Alpine Garden",
 		c_zero_self_made_fortune = "Self-Made Fortune",
+		c_zero_no_man = "No man can make it fall",
 	},
 	labels = {
 		zero_gala = "Gala",

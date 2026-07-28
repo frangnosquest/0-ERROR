@@ -136,6 +136,37 @@ SMODS.Sound{
     path = "meow.ogg",
 }
 
+SMODS.Shader({
+    key = "matrix_badge",
+    path = "matrix_badge.fs",
+    send_vars = function (element, ...)
+        local tile_scale = G.TILESCALE * G.TILESIZE * G.CANV_SCALE
+        local vt = {x = element.VT.x, y = element.VT.y, w = element.VT.w, h = element.VT.h}
+        vt.x = vt.x + (element.container and element.container.T.x or 0)
+        vt.y = vt.y + (element.container and element.container.T.y + 0.018 or 0)
+        local pos = {vt.x * tile_scale, vt.y * tile_scale}
+        local size = {vt.w * tile_scale, vt.h * tile_scale}
+        return {
+            badge_pos = pos,
+            badge_size = size,
+        }
+    end
+})
+
+local old_create_mod_badges = SMODS.create_mod_badges
+function SMODS.create_mod_badges(obj, badges)
+    old_create_mod_badges(obj, badges)
+    if obj then
+        for i = 1, #badges do
+            if badges[i].nodes[1].nodes[2].config.object and badges[i].nodes[1].nodes[2].config.object.content and badges[i].nodes[1].nodes[2].config.object.content.string == "0 ERROR" then
+                if not obj.no_shader_on_modbadge then
+                    badges[i].nodes[1].config.shader = "zero_matrix_badge"
+                end
+            end
+        end
+    end
+end
+
 SMODS.Shader{
 	key = "gala",
 	path = "gala.fs"
@@ -144,6 +175,11 @@ SMODS.Shader{
 SMODS.Shader{
 	key = "occult",
 	path = "occult.fs"
+}
+
+SMODS.Shader{
+	key = "matrix",
+	path = "matrix.fs"
 }
 
 SMODS.ScreenShader({
@@ -162,6 +198,10 @@ G.C.RAINBOW = SMODS.Gradient {
     key = 'rainbow',
     colours = { HEX("FFB0B2"), HEX("FFD7B0"), HEX("FFFAB0"), HEX("BFFFB0"), HEX("B0FFED"), HEX("B0E7FF"), HEX("B0B0FF"), HEX("E0B0FF") }
 }
+G.C.PATRON = SMODS.Gradient {
+    key = 'patron',
+    colours = { HEX("0A192F"), HEX("4B0082"), HEX("D4AF37") }
+}
 
 local ref_loc_colour = loc_colour
 function loc_colour(_c, _default)
@@ -170,5 +210,6 @@ function loc_colour(_c, _default)
 	G.ARGS.LOC_COLOURS.prestige = G.C.PRESTIGE
 	G.ARGS.LOC_COLOURS.elemental = G.C.ELEMENTAL
 	G.ARGS.LOC_COLOURS.secret_rare = G.C.RAINBOW
+	G.ARGS.LOC_COLOURS.patron = G.C.PATRON
     return G.ARGS.LOC_COLOURS[_c] or _default or G.C.UI.TEXT_DARK
 end

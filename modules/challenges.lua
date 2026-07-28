@@ -48,3 +48,15 @@ SMODS.Challenge {
 		},
 	}
 }
+
+SMODS.Challenge {
+	key = "no_man",
+	jokers = {
+		{ id = "j_zero_wall", eternal = true, edition = "negative" },
+	},
+	rules = {
+		modifiers = {
+			{id = "consumable_slots", value = -1}
+		}
+	},
+}

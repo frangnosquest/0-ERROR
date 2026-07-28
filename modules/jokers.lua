@@ -12,6 +12,13 @@ SMODS.Atlas {
   path = "zero_jokers_2.png"
 }
 
+SMODS.Atlas {
+  key = "zero_patrons",
+  px = 71,
+  py = 95,
+  path = "zero_patrons.png"
+}
+
 SMODS.Joker {
   key = "mad",
   name = "Mutual Assured Destruction",
@@ -1766,65 +1773,78 @@ SMODS.Joker {
 
 SMODS.Joker {
     key = "key_he4rt",
-	atlas = "zero_jokers",
+    atlas = "zero_jokers",
     pos = { x = 9, y = 0 },
     rarity = 2,
     blueprint_compat = false,
     cost = 4,
-	unlocked = true,
-	discovered = true,
-	loc_vars = function(self, info_queue, card)
-		info_queue[#info_queue+1] = G.P_CENTERS['m_zero_l0ck']
-		info_queue[#info_queue+1] = G.P_CENTERS['m_zero_k3y']
+    unlocked = true,
+    discovered = true,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = G.P_CENTERS['m_zero_l0ck']
+        info_queue[#info_queue+1] = G.P_CENTERS['m_zero_k3y']
     end,
     add_to_deck = function(self, card, from_debuff)
-		for _, v in pairs(G.playing_cards) do
-			if v.config.center and (v.config.center == G.P_CENTERS.m_zero_k3y or v.config.center == G.P_CENTERS.m_zero_l0ck) then
-				return
-			end
-		end
-			local l0ck_card = SMODS.add_card { set = "Base", enhancement = "m_zero_l0ck", area = G.play }
-			local k3y_card = SMODS.add_card { set = "Base", enhancement = "m_zero_k3y", area = G.play }
-		for _, v in pairs(G.play.cards) do
-			G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.5, func = function()
-				draw_card(G.play, G.deck, nil, nil, nil, v)
-				G.deck:shuffle()
-			return true end }))
-		end
-		G.E_MANAGER:add_event(Event({trigger = 'after', delay = 1.5, blocking = false, func = function()
-			G.deck:shuffle()
-		return true end }))
-	end,
-	remove_from_deck = function(self, card, from_debuff)
-		for _, v in pairs(G.jokers.cards) do
-			if v.config.center and v.config.center.key == "j_zero_key_he4rt" then
-				return
-			end
-		end
-		for _, v in pairs(G.playing_cards) do
-			if v.config.center and (v.config.center == G.P_CENTERS.m_zero_l0ck or v.config.center == G.P_CENTERS.m_zero_k3y) then
-				v:start_dissolve("override")
-			end
-		end
-	end,
-	calculate = function(self, card, context)
-		if context.setting_blind then
-			local found_l0ck = false
-			local found_k3y = false
-			for _, v in pairs(G.playing_cards) do
-				if v.config.center and v.config.center == G.P_CENTERS.m_zero_l0ck then
-					found_l0ck = true
-				elseif v.config.center and v.config.center == G.P_CENTERS.m_zero_k3y then
-					found_k3y = true
-				end
-			end
-			if found_l0ck == false then
-				local l0ck_card = SMODS.add_card { set = "Base", enhancement = "m_zero_l0ck", area = G.deck }
-			end
-			if found_k3y == false then
-				local k3y_card = SMODS.add_card { set = "Base", enhancement = "m_zero_k3y", area = G.deck }
-			end
-		end
+        for _, v in pairs(G.playing_cards) do
+            if v.config.center and (v.config.center == G.P_CENTERS.m_zero_k3y or v.config.center == G.P_CENTERS.m_zero_l0ck) then
+                return
+            end
+        end
+        local l0ck_card = create_card("Base", G.play, nil, nil, nil, nil, nil, "zero_l0ck")
+        l0ck_card:set_ability(G.P_CENTERS.m_zero_l0ck)
+        G.play:emplace(l0ck_card)
+        table.insert(G.playing_cards, l0ck_card)
+        
+        local k3y_card = create_card("Base", G.play, nil, nil, nil, nil, nil, "zero_k3y")
+        k3y_card:set_ability(G.P_CENTERS.m_zero_k3y)
+        G.play:emplace(k3y_card)
+        table.insert(G.playing_cards, k3y_card)
+        for _, v in pairs(G.play.cards) do
+            G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.5, func = function()
+                draw_card(G.play, G.deck, nil, nil, nil, v)
+                G.deck:shuffle()
+            return true end }))
+        end
+        G.E_MANAGER:add_event(Event({trigger = 'after', delay = 1.5, blocking = false, func = function()
+            G.deck:shuffle()
+        return true end }))
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        for _, v in pairs(G.jokers.cards) do
+            if v.config.center and v.config.center.key == "j_zero_key_he4rt" and v ~= card then
+                return
+            end
+        end
+        for _, v in pairs(G.playing_cards) do
+            if v.config.center and (v.config.center == G.P_CENTERS.m_zero_l0ck or v.config.center == G.P_CENTERS.m_zero_k3y) then
+                v:start_dissolve("override")
+            end
+        end
+    end,
+    calculate = function(self, card, context)
+        if context.setting_blind then
+            local found_l0ck = false
+            local found_k3y = false
+            for _, v in pairs(G.playing_cards) do
+                if v.config.center and v.config.center == G.P_CENTERS.m_zero_l0ck then
+                    found_l0ck = true
+                elseif v.config.center and v.config.center == G.P_CENTERS.m_zero_k3y then
+                    found_k3y = true
+                end
+            end
+            if found_l0ck == false then
+                local l0ck_card = create_card("Base", G.deck, nil, nil, nil, nil, nil, "zero_l0ck")
+                l0ck_card:set_ability(G.P_CENTERS.m_zero_l0ck)
+                G.deck:emplace(l0ck_card)
+                table.insert(G.playing_cards, l0ck_card)
+            end
+            if found_k3y == false then
+                local k3y_card = create_card("Base", G.deck, nil, nil, nil, nil, nil, "zero_k3y")
+                k3y_card:set_ability(G.P_CENTERS.m_zero_k3y)
+                G.deck:emplace(k3y_card)
+                table.insert(G.playing_cards, k3y_card)
+            end
+        end
     end
 }
 
@@ -1989,6 +2009,7 @@ SMODS.Joker {
 				end
 				ret[k] = val
 			end
+			card.ability.choice = pseudorandom("4_h", 1, #card.ability.extra)
 			return ret
         end
     end,
@@ -4922,7 +4943,7 @@ if next(SMODS.find_mod('SpectrumFramework')) then
 	}
 end
 
---keep legendary jokers last
+--keep legendary and patron jokers last
 SMODS.Joker {
     key = "missingno",
 	atlas = "zero_jokers",
@@ -5261,3 +5282,118 @@ SMODS.Joker {
 	end,
 	pronouns = "any_all"
 }
+
+--patron jokers
+SMODS.Rarity({
+	key = "patron",
+	loc_txt = {name = "Patron"},
+	badge_colour = SMODS.Gradients.zero_patron
+})
+
+SMODS.Joker {
+    key = "mizzo",
+	atlas = "zero_patrons",
+    pos = { x = 0, y = 0 },
+	soul_pos = { x = 0, y = 1 },
+    rarity = "zero_patron",
+    cost = 20,
+	unlocked = false,
+	config = { extra = { hands = {} } },
+	calculate = function(self, card, context)
+		if context.using_consumeable and ((context.consumeable.ability.set == "Planet" and context.consumeable.ability.hand_type) or context.consumeable.config.center.key == "c_black_hole") then
+			local to_upgrade
+			local times
+			if context.consumeable.ability.hand_type then
+				card.ability.extra.hands[context.consumeable.ability.hand_type] = (card.ability.extra.hands[context.consumeable.ability.hand_type] or 0) + 1
+				--[[for hand, times in pairs(card.ability.extra.hands) do
+					if hand == context.consumeable.ability.hand_type then
+						
+						break
+					end
+				end]]
+				to_upgrade = context.consumeable.ability.hand_type
+				times = card.ability.extra.hands[context.consumeable.ability.hand_type]
+			else
+				card.ability.extra.hands["all"] = (card.ability.extra.hands["all"] or 0) + 1
+				times = card.ability.extra.hands["all"]
+			end
+			SMODS.calculate_effect({ message = localize('k_upgrade_ex') }, card)
+            if to_upgrade then
+				SMODS.upgrade_poker_hands { hands = to_upgrade, level_up = times, from = card }
+			else
+				update_hand_text({ sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3 },
+					{ handname = localize('k_all_hands'), chips = '...', mult = '...', level = '' })
+				G.E_MANAGER:add_event(Event({
+					trigger = 'after',
+					delay = 0.2,
+					func = function()
+						play_sound('tarot1')
+						card:juice_up(0.8, 0.5)
+						G.TAROT_INTERRUPT_PULSE = true
+						return true
+					end
+				}))
+				update_hand_text({ delay = 0 }, { mult = '+', StatusText = true })
+				G.E_MANAGER:add_event(Event({
+					trigger = 'after',
+					delay = 0.9,
+					func = function()
+						play_sound('tarot1')
+						card:juice_up(0.8, 0.5)
+						return true
+					end
+				}))
+				update_hand_text({ delay = 0 }, { chips = '+', StatusText = true })
+				G.E_MANAGER:add_event(Event({
+					trigger = 'after',
+					delay = 0.9,
+					func = function()
+						play_sound('tarot1')
+						card:juice_up(0.8, 0.5)
+						G.TAROT_INTERRUPT_PULSE = nil
+						return true
+					end
+				}))
+				update_hand_text({ sound = 'button', volume = 0.7, pitch = 0.9, delay = 0 }, { level = '+' .. times })
+				delay(1.3)
+				SMODS.upgrade_poker_hands({ instant = true, level_up = times })
+				update_hand_text({ sound = 'button', volume = 0.7, pitch = 1.1, delay = 0 },
+					{ mult = 0, chips = 0, handname = '', level = '' })
+			end
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_jokerless_1" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "she_any"
+}
+
+--[[SMODS.Joker {
+    key = "lumistratos",
+	atlas = "zero_patrons",
+    pos = { x = 1, y = 0 },
+	soul_pos = { x = 1, y = 1 },
+    rarity = "zero_patron",
+    cost = 20,
+	unlocked = false,
+	discovered = false,
+	
+	pronouns = "empty"
+}
+
+SMODS.Joker {
+    key = "avide",
+	atlas = "zero_patrons",
+    pos = { x = 2, y = 0 },
+	soul_pos = { x = 2, y = 1 },
+    rarity = "zero_patron",
+    cost = 20,
+	unlocked = false,
+	discovered = false,
+	
+	pronouns = "empty"
+}]]
