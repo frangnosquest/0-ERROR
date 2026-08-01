@@ -4717,13 +4717,13 @@ SMODS.Joker {
     cost = 4,
 	unlocked = true,
 	discovered = true,
-    config = { extra = { mult = 0, mult_mod = 4} },
+    config = { extra = { mult = 0, mult_mod = 6} },
     loc_vars = function(self, info_queue, card)
         info_queue[#info_queue + 1] = {set = "Other", key = 'zero_miriam_lola'}
 		return { vars = { card.ability.extra.mult_mod, card.ability.extra.mult } }
     end,
     calculate = function(self, card, context)
-		if context.discard and not context.blueprint then
+		if context.pre_discard and not context.blueprint then
 			card.ability.extra.mult = card.ability.extra.mult + card.ability.extra.mult_mod
 		end
         if context.joker_main then
@@ -4741,7 +4741,7 @@ SMODS.Joker {
 		end
 	end,
 	remove_from_deck = function(self, card, from_debuff)
-		if not next(SMODS.find_card('j_zero_miriam')) then
+		if next(SMODS.find_card('j_zero_lola')) and not next(SMODS.find_card('j_zero_miriam')) then
 			G.jokers.config.card_limit = G.jokers.config.card_limit - 1
 		end
 	end
@@ -4783,7 +4783,7 @@ SMODS.Joker {
 		end
 	end,
 	remove_from_deck = function(self, card, from_debuff)
-		if not next(SMODS.find_card('j_zero_lola')) then
+		if next(SMODS.find_card('j_zero_miriam')) and not next(SMODS.find_card('j_zero_lola')) then
 			G.jokers.config.card_limit = G.jokers.config.card_limit - 1
 		end
 	end
@@ -5305,12 +5305,6 @@ SMODS.Joker {
 			local times
 			if context.consumeable.ability.hand_type then
 				card.ability.extra.hands[context.consumeable.ability.hand_type] = (card.ability.extra.hands[context.consumeable.ability.hand_type] or 0) + 1
-				--[[for hand, times in pairs(card.ability.extra.hands) do
-					if hand == context.consumeable.ability.hand_type then
-						
-						break
-					end
-				end]]
 				to_upgrade = context.consumeable.ability.hand_type
 				times = card.ability.extra.hands[context.consumeable.ability.hand_type]
 			else
@@ -5363,7 +5357,7 @@ SMODS.Joker {
 		end
 	end,
 	check_for_unlock = function(self, args)
-		if args.type == 'win_challenge' and G.GAME.challenge == "c_jokerless_1" then
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_black_hole_sun" then
 			self.challenge_bypass = true
 			unlock_card(self)
 			discover_card(self)
@@ -5372,7 +5366,7 @@ SMODS.Joker {
 	pronouns = "she_any"
 }
 
---[[SMODS.Joker {
+SMODS.Joker {
     key = "lumistratos",
 	atlas = "zero_patrons",
     pos = { x = 1, y = 0 },
@@ -5380,11 +5374,39 @@ SMODS.Joker {
     rarity = "zero_patron",
     cost = 20,
 	unlocked = false,
-	discovered = false,
-	
-	pronouns = "empty"
+	config = { extra = { hands = {} } },
+	calculate = function(self, card, context)
+		if context.selling_card and context.card.ability.set == "Joker" and context.card ~= card then
+			if #G.consumeables.cards + G.GAME.consumeable_buffer < G.consumeables.config.card_limit then
+				G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
+				G.E_MANAGER:add_event(Event({
+				trigger = 'before',
+				delay = 0.0,
+				func = (function()
+					local card = create_card('Prestige',G.consumeables, nil, nil, nil, nil, nil, 'lumistratos')
+					card:add_to_deck()
+					G.consumeables:emplace(card)
+					G.GAME.consumeable_buffer = 0
+					return true
+				end)}))
+				return {
+				message = localize('k_plus_prestige'),
+				colour = G.C.SECONDARY_SET.Spectral,
+				card = card
+				}
+			end
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_edge_of_space" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "she_they"
 }
-
+--[[
 SMODS.Joker {
     key = "avide",
 	atlas = "zero_patrons",

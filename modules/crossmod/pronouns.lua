@@ -37,3 +37,13 @@ CardPronouns.Pronoun {
 	end,
 	key = "she_any"
 }
+
+CardPronouns.Pronoun {
+	colour = HEX("E791E7"),
+    text_colour = G.C.WHITE,
+    pronoun_table = { "She", "They" },
+	in_pool = function()
+		return false
+	end,
+	key = "she_they"
+}

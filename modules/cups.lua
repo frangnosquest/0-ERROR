@@ -319,11 +319,25 @@ SMODS.Consumable{
 		info_queue[#info_queue + 1] = { key = 'e_negative_consumable', set = 'Edition', config = { extra = 1 } }
     end,
 	can_use = function(self, card)
-		return true
+		local valid = {}
+		for k, v in ipairs(G.consumeables.cards) do
+			if not (v.edition and v.edition.negative) then
+				valid[#valid+1] = v
+			end
+		end
+		if #valid > 0 then
+			return true
+		end
 	end,
 	use = function(self, card)
-		if #G.consumeables.cards > 0 then
-			pseudorandom_element(G.consumeables.cards, "cups_two"):set_edition("e_negative")
+		local valid = {}
+		for k, v in ipairs(G.consumeables.cards) do
+			if not (v.edition and v.edition.negative) then
+				valid[#valid+1] = v
+			end
+		end
+		if #valid > 0 then
+			pseudorandom_element(valid, "cups_two"):set_edition("e_negative")
 		end
 		card:juice_up(0.3, 0.5)
     end

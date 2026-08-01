@@ -11,3 +11,14 @@ pattern = '''G.STATE = G.STATES.SHOP'''
 position = "after"
 payload = '''if (G.GAME.modifiers.zero_no_shop) then G.STATE = G.STATES.BLIND_SELECT end'''
 match_indent = true
+
+#custom win ante
+
+[[patches]]
+[patches.pattern]
+target = 'game.lua'
+pattern = "elseif v.id == 'no_reward_specific' then"
+position = 'before'
+match_indent = true
+payload = """elseif v.id == 'zero_win_ante' then
+  self.GAME.win_ante = v.value"""

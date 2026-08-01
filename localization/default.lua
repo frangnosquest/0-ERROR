@@ -1577,11 +1577,24 @@ local loc_stuff = {
 			"Using a {C:planet}Planet{} card {C:attention}upgrades",
 			"the hand an extra number of ",
 			"times equal to how many times",
-			"it was used this run"
+			"it was used while owning this"
         },
 		unlock = {
             "Beat the",
-            "{C:attention}Jokerless",
+            "{C:attention}Black Hole Sun",
+            "challenge"
+        }
+      },
+	  j_zero_lumistratos = {
+        name = {"Lumistratos, the Vast",
+				"{s:0.5}Great Lady of Space"},
+        text = {
+            "Creates a {X:prestige,C:white}Prestige{} card",
+            "when a {C:attention}Joker{} is sold"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Edge of Space",
             "challenge"
         }
       },
@@ -2585,7 +2598,12 @@ local loc_stuff = {
     zero_a_discards = "+#1# Discards",
 	},
 	v_text = {
-	  ch_c_zero_no_shop = {"No {C:attention}shops"}
+	  ch_c_zero_no_shop = {"No {C:attention}shops"},
+	  ch_c_zero_no_tarots = {"{C:tarot}Tarot{} cards do not appear in the shop"},
+	  ch_c_zero_no_planets = {"{C:planet}Planet{} cards do not appear in the shop"},
+	  ch_c_zero_level_zero = {"All hands start at level {C:attention}0"},
+	  ch_c_zero_patron_unlock = {"Challenge unlocks a {C:patron}Patron Joker"},
+	  ch_c_zero_win_ante = {"Beat Ante {C:attention}#1#{} to win"},
 	},
 	suits_singular = {
 	  zero_Brights = "Bright",
@@ -2596,7 +2614,9 @@ local loc_stuff = {
 	challenge_names = {
 		c_zero_alpine_garden = "Alpine Garden",
 		c_zero_self_made_fortune = "Self-Made Fortune",
-		c_zero_no_man = "No man can make it fall",
+		c_zero_no_man = "No Man Can Make It Fall",
+		c_zero_black_hole_sun = "Black Hole Sun",
+		c_zero_edge_of_space = "Edge of Space",
 	},
 	labels = {
 		zero_gala = "Gala",
