@@ -14,10 +14,10 @@ payload = '''
 
 local challenge_card
 
-for i = 1, #G.P_LOCKED do
+for i = #G.P_LOCKED, 1, -1 do
     challenge_card = G.P_LOCKED[i]
 
-    if not challenge_card.unlocked and challenge_card.check_for_unlock and type(challenge_card.check_for_unlock) == 'function' then
+    if challenge_card and not challenge_card.unlocked and challenge_card.check_for_unlock and type(challenge_card.check_for_unlock) == 'function' then
         challenge_card:check_for_unlock({type = 'win_challenge'})
     end
 end
