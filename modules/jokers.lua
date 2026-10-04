@@ -324,6 +324,62 @@ Game.start_run = function(self, args)
   end
 end
 
+-- overlay listing the jokers a copy of Perma-Monster has absorbed
+local PM_PER_ROW = 5
+
+G.FUNCS.zero_perma_monster_view = function(e)
+  local monster = e.config.ref_table
+  local copies = monster.ability.immutable.copied_jokers
+  G.zero_pm_areas = {}
+  local rows = {}
+  if #copies == 0 then
+    rows[1] = { n = G.UIT.R, config = { align = "cm", padding = 0.3 }, nodes = {
+      { n = G.UIT.T, config = { text = localize("k_zero_absorbed_empty"), scale = 0.5, colour = G.C.UI.TEXT_LIGHT } }
+    } }
+  else
+    for start = 1, #copies, PM_PER_ROW do
+      local count = math.min(PM_PER_ROW, #copies - start + 1)
+      local area = CardArea(0, 0, G.CARD_W * 0.95 * PM_PER_ROW, G.CARD_H * 0.95,
+        { card_limit = count, type = "title", highlight_limit = 0 })
+      G.zero_pm_areas[#G.zero_pm_areas + 1] = area
+      for i = start, start + count - 1 do
+        local src = copies[i]
+        local sx, sy = src.T.x, src.T.y
+        src.T.x, src.T.y = 0, 0
+        local c = copy_card(src)
+        src.T.x, src.T.y = sx, sy
+        c.T.x, c.T.y = area.T.x, area.T.y
+        c.VT.x, c.VT.y = area.T.x, area.T.y
+        c.states.drag.can = false
+        area:emplace(c)
+      end
+      rows[#rows + 1] = { n = G.UIT.R, config = { align = "cm", padding = 0.05 }, nodes = {
+        { n = G.UIT.O, config = { object = area } }
+      } }
+    end
+  end
+
+  G.FUNCS.overlay_menu({
+    definition = create_UIBox_generic_options({ contents = {
+      { n = G.UIT.R, config = { align = "cm", padding = 0.1 }, nodes = {
+        { n = G.UIT.T, config = { text = localize({ type = "variable", key = "zero_absorbed_title", vars = { #copies } }), scale = 0.6, colour = G.C.UI.TEXT_LIGHT, shadow = true } }
+      } },
+      { n = G.UIT.R, config = { align = "cm", padding = 0.15, r = 0.1, colour = G.C.BLACK, emboss = 0.05 }, nodes = rows },
+    } })
+  })
+end
+
+local pm_exit_overlay = G.FUNCS.exit_overlay_menu
+G.FUNCS.exit_overlay_menu = function(...)
+  if G.zero_pm_areas then
+    for _, area in ipairs(G.zero_pm_areas) do
+      area:remove()
+    end
+    G.zero_pm_areas = nil
+  end
+  return pm_exit_overlay(...)
+end
+
 SMODS.Joker {
   key = "perma_monster",
   name = "Perma Monster",
@@ -4943,6 +4999,117 @@ if next(SMODS.find_mod('SpectrumFramework')) then
 	}
 end
 
+SMODS.Joker {
+	key = "soda_shake",
+	atlas = "zero_jokers",
+	pos = { x = 1, y = 9 },
+	rarity = 2,
+	blueprint_compat = true,
+	eternal_compat = false,
+	cost = 6,
+	pools = { Food = true },
+	unlocked = true,
+	discovered = true,
+	config = { extra = { mult = 0, mult_gain = 3, rounds = 0, threshold = 4, odds = 6 } },
+	loc_vars = function(self, info_queue, card)
+		local numerator, denominator = SMODS.get_probability_vars(card, 1, card.ability.extra.odds, 'zero_soda_shake')
+		return { vars = { card.ability.extra.mult_gain, card.ability.extra.mult, card.ability.extra.threshold, numerator, denominator } }
+	end,
+	update = function(self, card, dt)
+		if card.area ~= G.jokers or card.debuff or card.ability.extra.rounds <= 0 then return end
+		local ratio = math.min(1, card.ability.extra.rounds / card.ability.extra.threshold)
+		card.zero_shake_timer = (card.zero_shake_timer or 0) + dt
+		if card.zero_shake_timer >= (card.zero_shake_wait or 4) then
+			card.zero_shake_timer = 0
+			card.zero_shake_wait = (5 - 4 * ratio) * (0.7 + 0.6 * math.random())
+			card:juice_up(0.1 + 0.5 * ratio, 0.05 + 0.25 * ratio)
+		end
+	end,
+	set_ability = function(self, card, initial, delay_sprites)
+		card.zero_shake_timer = 0
+		card.zero_shake_wait = 4
+	end,
+	calculate = function(self, card, context)
+		if context.joker_main and card.ability.extra.mult > 0 then
+			return { mult = card.ability.extra.mult }
+		end
+		if context.end_of_round and context.game_over == false and context.main_eval and not context.blueprint then
+			card.ability.extra.rounds = card.ability.extra.rounds + 1
+			card.ability.extra.mult = card.ability.extra.mult + card.ability.extra.mult_gain
+			if card.ability.extra.rounds >= card.ability.extra.threshold
+			and SMODS.pseudorandom_probability(card, 'zero_soda_shake', 1, card.ability.extra.odds) then
+				play_sound('zero_cork_pop')
+				G.E_MANAGER:add_event(Event({
+					func = function()
+						add_tag(Tag(get_next_tag_key('zero_soda_shake')))
+						play_sound('generic1', 0.9 + math.random() * 0.1, 0.8)
+						play_sound('holo1', 1.2 + math.random() * 0.1, 0.4)
+						return true
+					end
+				}))
+				SMODS.destroy_cards(card, nil, nil, true)
+				return { message = localize('k_pop_ex') }
+			end
+			return {
+				message = localize('k_upgrade_ex'),
+				colour = G.C.MULT
+			}
+		end
+	end,
+}
+
+SMODS.Joker {
+	key = "ond",
+	atlas = "zero_jokers",
+	pos = { x = 9, y = 8 },
+	pixel_size = { w = 71, h = 71 },
+	rarity = 2,
+	blueprint_compat = false,
+	cost = 6,
+	unlocked = true,
+	discovered = true,
+	config = {
+		extra = {
+			odds = {
+				new_effect = 3,
+				lose_effect = 3,
+				change_effect = 5,
+				gain_value = 12,
+				lose_value = 8,
+				nothing = 1,
+			},
+			min_new_value = 1,
+			max_new_value = 10,
+			min_gain_value = 1,
+			max_gain_value = 15,
+			min_lose_value = 1,
+			max_lose_value = 10,
+		}
+	},
+	mutation_effects = SMODS.Centers.j_zero_alpine_lily.mutation_effects,
+	loc_vars = function(self, info_queue, card)
+		return { vars = {} }
+	end,
+	calculate = function(self, card, context)
+		if context.end_of_round and context.game_over == false and context.main_eval and not context.blueprint then
+			local neighbors = {}
+			for i, joker in ipairs(G.jokers.cards) do
+				if joker == card then
+					neighbors = { G.jokers.cards[i - 1], G.jokers.cards[i + 1] }
+					break
+				end
+			end
+			if #neighbors == 0 then return end
+			local target = pseudorandom_element(neighbors, "zero_ond_target")
+			if not target.ability.zero_ond or #target.ability.zero_ond.mutations == 0 then
+				target.ability.zero_ond = { mutations = { { effect = "mult", value = 4 } } }
+			end
+			SMODS.calculate_effect({ message = localize("k_mutated_ex") }, target)
+			SMODS.calculate_effect({ message = localize(zero_ond_mutate(self, card, target)) }, target)
+		end
+	end,
+}
+
 --keep legendary and patron jokers last
 SMODS.Joker {
     key = "missingno",
@@ -5233,6 +5400,8 @@ SMODS.Joker {
 	pronouns = "they_them"
 }
 
+local skye_areas = {}
+
 SMODS.Joker {
     key = "skye", --A dubious little creature, getting up to mischief. This is no good.
 	atlas = "zero_jokers",
@@ -5268,12 +5437,18 @@ SMODS.Joker {
             }))
             return nil, true
 		end
-		if context.check_enhancement and context.other_card.config.center.key ~= "c_base" then
+		if context.check_enhancement and context.other_card.ability.set == "Enhanced" then
 			local ret = {}
-			for _, w in pairs({G.hand.cards, G.play.cards}) do
-				for _, v in pairs(w) do
-					if v ~= context.other_card and v.config.center.key ~= "c_base" then
-						ret[v.config.center.key] = true
+			local other = context.other_card
+			local areas = skye_areas
+			areas[1], areas[2] = G.hand.cards, G.play.cards
+			for a = 1, 2 do
+				local cards = areas[a]
+				for i = 1, #cards do
+					local v = cards[i]
+					local key = v.config.center.key
+					if v ~= other and key ~= "c_base" then
+						ret[key] = true
 					end
 				end
 			end

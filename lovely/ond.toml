@@ -1,0 +1,21 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = -1
+
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+pattern = "for _, v in ipairs(info_queue) do"
+position = "before"
+match_indent = true
+payload = '''
+if not hide_desc and card and card.ability and card.ability.zero_ond then
+    for _, mutation in ipairs(card.ability.zero_ond.mutations) do
+        local effect = zero_mutation_effects()[mutation.effect]
+        if effect then
+            info_queue[#info_queue+1] = { set = 'Other', key = "zero_ond_" .. mutation.effect, specific_vars = effect:loc_vars(card, mutation.value).vars }
+        end
+    end
+end
+'''

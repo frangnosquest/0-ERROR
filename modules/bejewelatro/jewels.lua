@@ -439,6 +439,9 @@ local drag_ref = Moveable.drag
 function Moveable:drag(offset)
     if self and self.ability and self.ability.set == 'jewel' then
         if self.getting_destroyed then return end
+        if not self.position or not Bejewelatro.jewel_rows[self.position.y] then
+            return
+        end
         if not tracked_card then
             tracked_card = self
             mouse_x, mouse_y = love.mouse.getPosition()

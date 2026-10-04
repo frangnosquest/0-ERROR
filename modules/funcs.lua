@@ -64,6 +64,63 @@ zero_create_mutation = function(self, card, gala)
 	return mutation
 end
 
+zero_mutation_effects = function()
+	return SMODS.Centers.j_zero_alpine_lily.mutation_effects
+end
+
+zero_ond_score = function(card)
+	local effects = zero_mutation_effects()
+	local ret
+	local tail
+	for _, mutation in ipairs(card.ability.zero_ond.mutations) do
+		local effect = effects[mutation.effect]
+		if effect and type(effect.calculate) == "function" then
+			local result = effect:calculate(card, mutation.value)
+			if tail then
+				tail.extra = result
+			else
+				ret = result
+			end
+			tail = result
+		end
+	end
+	return ret
+end
+
+zero_ond_mutate = function(self, ond, target)
+	local extra = ond.ability.extra
+	local odds_list = { "new_effect", "lose_effect", "change_effect", "gain_value", "lose_value", "nothing" }
+	local total = 0
+	for _, v in ipairs(odds_list) do total = total + extra.odds[v] end
+	local roll = pseudorandom("zero_ond_roll", 1, total)
+	local outcome
+	for _, v in ipairs(odds_list) do
+		if roll <= extra.odds[v] then
+			outcome = v
+			break
+		end
+		roll = roll - extra.odds[v]
+	end
+	local mutations = target.ability.zero_ond.mutations
+	if outcome == "lose_effect" and #mutations <= 1 then outcome = "new_effect" end
+	local picked = mutations[pseudorandom("zero_ond_pick", 1, #mutations)]
+	if outcome == "new_effect" then
+		mutations[#mutations + 1] = {
+			effect = pseudorandom_element(zero_list_mutation_effects(self), "zero_ond_new_effect"),
+			value = pseudorandom("zero_ond_new_value", extra.min_new_value, extra.max_new_value)
+		}
+	elseif outcome == "lose_effect" then
+		table.remove(mutations, pseudorandom("zero_ond_lose_effect", 1, #mutations))
+	elseif outcome == "change_effect" then
+		picked.effect = pseudorandom_element(zero_list_mutation_effects(self), "zero_ond_change_effect")
+	elseif outcome == "gain_value" then
+		picked.value = picked.value + pseudorandom("zero_ond_gain_value", extra.min_gain_value, extra.max_gain_value)
+	elseif outcome == "lose_value" then
+		picked.value = math.max(0, picked.value - pseudorandom("zero_ond_lose_value", extra.min_lose_value, extra.max_lose_value))
+	end
+	return "k_" .. outcome .. "_ex"
+end
+
 --for lipu suno, compose Toki Pona numerals using luka (5), tu (2), wan (1)
 --i need this so that the joker can have dynamic odds like all the others for oops-like effects...
 zero_compose_toki_pona = function(number)

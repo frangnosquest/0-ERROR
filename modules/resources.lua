@@ -20,6 +20,17 @@ SMODS.Font {
 	DESCSCALE = 1
 }
 
+SMODS.Font {
+	key = "symbols",
+	path = "symbols.ttf",
+	render_scale = 200,
+	TEXT_HEIGHT_SCALE = 0.9,
+	TEXT_OFFSET = { x = 12, y = -24 },
+	FONTSCALE = 0.06,
+	squish = 1,
+	DESCSCALE = 1
+}
+
 SMODS.Sound{
      vol = 1.0,
     pitch = 1.0, 
@@ -213,3 +224,9 @@ function loc_colour(_c, _default)
 	G.ARGS.LOC_COLOURS.patron = G.C.PATRON
     return G.ARGS.LOC_COLOURS[_c] or _default or G.C.UI.TEXT_DARK
 end
+SMODS.Sound{
+     vol = 1.0,
+    pitch = 1.0, 
+    key = "cork_pop", 
+    path = "cork_pop.ogg",
+}

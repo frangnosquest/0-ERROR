@@ -357,6 +357,14 @@ local loc_stuff = {
                 "{C:inactive}(Creating {C:attention}#1#{C:inactive})",
             },
         },
+        c_zero_code_fu = {
+            name = "Code Fu",
+            text = {
+                "Creates the {C:attention}best possible{}",
+                "card for the current situation",
+                "{C:inactive}(Must have room)",
+            },
+        },
         c_zero_moonstone = {
             name = "Moonstone",
             text = {
@@ -1034,6 +1042,26 @@ local loc_stuff = {
         text = {
 			"{f:zero_pixeldingbats}O{f:zero_pokemon,C:attention}Change{f:zero_pixeldingbats}WMYT{f:zero_pokemon}JokeRight{f:zero_pixeldingbats}YUI",
 			"{f:zero_pixeldingbats}MCY{f:zero_pokemon}values{f:zero_pixeldingbats}PQU{f:zero_pokemon,C:red}Randomly{f:zero_pixeldingbats}QOI"
+        },
+      },
+	  j_zero_soda_shake = {
+        name = "Soda Shake",
+        text = {
+			{
+			"Gains {C:mult}+#1#{} Mult at end of round.",
+			"After {C:attention}#3#{} rounds, {C:green}#4# in #5#{} chance to {C:attention}pop{}",
+			"at end of round, creating a random {C:attention}Tag{}",
+			"{C:inactive}(Currently {C:mult}+#2#{C:inactive} Mult)",
+          }
+        },
+      },
+	  j_zero_ond = {
+        name = "{f:zero_symbols}Ω{}ND",
+        text = {
+			{
+			"{C:attention}Mutates{} a random adjacent",
+			"{C:attention}Joker{} at end of round"
+          }
         },
       },
 	  j_zero_missingno = {
@@ -2386,6 +2414,36 @@ local loc_stuff = {
 			"{C:money}+$#1#",
 		},
 	  },
+	  zero_ond_mult = {
+		name = "{f:zero_symbols}Ω{}ND Mutation",
+		text = {
+			"{C:mult}+#1#{} Mult",
+		},
+	  },
+	  zero_ond_chips = {
+		name = "{f:zero_symbols}Ω{}ND Mutation",
+		text = {
+			"{C:chips}+#1#{} Chips",
+		},
+	  },
+	  zero_ond_xmult = {
+		name = "{f:zero_symbols}Ω{}ND Mutation",
+		text = {
+			"{X:mult,C:white}X#1#{} Mult",
+		},
+	  },
+	  zero_ond_xchips = {
+		name = "{f:zero_symbols}Ω{}ND Mutation",
+		text = {
+			"{C:white,X:chips}X#1#{} Chips",
+		},
+	  },
+	  zero_ond_dollars = {
+		name = "{f:zero_symbols}Ω{}ND Mutation",
+		text = {
+			"{C:money}+$#1#",
+		},
+	  },
 	  zero_lipu_suno_info = {
 		name = "mi toki ala e toki pona",
 		text = {
@@ -2509,6 +2567,8 @@ local loc_stuff = {
   },
   misc = {
     dictionary = {
+      b_zero_absorbed = "DESTROYED",
+      k_zero_absorbed_empty = "Nothing destroyed yet",
       b_prestige = "Prestige",
       k_prestige_pack = "Prestige Pack",
 	  b_cups = "Cups",
@@ -2527,6 +2587,7 @@ local loc_stuff = {
 	  k_plus_sunsteel_pow = "+Sunsteel Power",
       k_poisoned_ex = "Poisoned!",
       k_charged_ex = "Charged!",
+	  k_pop_ex = "Pop!",
 	  k_mutated_ex = "Mutated!",
 	  k_new_effect_ex = "New Effect!",
 	  k_lose_effect_ex = "Lost Effect!",
@@ -2590,6 +2651,7 @@ local loc_stuff = {
 	  zero_sc_hint_ = "The password\nis found where\nAncient Magic\nmeets its end",
     },
 	v_dictionary = {
+	  zero_absorbed_title = "Destroyed Jokers (#1#)",
 	  zero_alpine_lily_mult = "+#1# Mult",
 	  zero_alpine_lily_chips = "+#1# Chips",
 	  zero_alpine_lily_xmult = "X#1# Mult",

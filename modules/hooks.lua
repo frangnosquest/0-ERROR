@@ -81,6 +81,38 @@ function G.UIDEF.zeroerror_joker_use_buttons(card, use_button)
 			}
 		}
 	}
+	local rows = {
+		{
+			n = G.UIT.R,
+			config = { align = 'cl' },
+			nodes = {
+				sell
+			}
+		},
+		{
+			n = G.UIT.R,
+			config = { align = 'cl' },
+			nodes = {
+				use
+			}
+		},
+	}
+	if card.config.center.key == "j_zero_perma_monster" then
+		rows[#rows + 1] = {
+			n = G.UIT.R,
+			config = { align = 'cl' },
+			nodes = {
+				{
+					n = G.UIT.C,
+					config = { ref_table = card, align = "cm", maxw = 1.25, padding = 0.1, r = 0.08, minw = 1.25, hover = true, shadow = true, colour = G.C.BLUE, button = 'zero_perma_monster_view' },
+					nodes = {
+						{ n = G.UIT.B, config = { w = 0.1, h = 0.4 } },
+						{ n = G.UIT.T, config = { text = localize('b_zero_absorbed'), colour = G.C.UI.TEXT_LIGHT, scale = 0.35, shadow = true } }
+					}
+				}
+			}
+		}
+	end
 	local t = {
 		n = G.UIT.ROOT,
 		config = { padding = 0, colour = G.C.CLEAR },
@@ -88,22 +120,7 @@ function G.UIDEF.zeroerror_joker_use_buttons(card, use_button)
 			{
 				n = G.UIT.C,
 				config = { padding = 0.15, align = 'cl' },
-				nodes = {
-					{
-						n = G.UIT.R,
-						config = { align = 'cl' },
-						nodes = {
-							sell
-						}
-					},
-					{
-						n = G.UIT.R,
-						config = { align = 'cl' },
-						nodes = {
-							use
-						}
-					},
-				}
+				nodes = rows
 			},
 		}
 	}
@@ -158,7 +175,7 @@ end
 -- look here for Suit Yourself cards later
 local alias__Card_is_suit = Card.is_suit
 function Card:is_suit(suit, bypass_debuff, flush_calc)
-	if next(SMODS.find_card('j_zero_skye')) and suit == "Spades" and self.config.center.key ~= "c_base" then
+	if suit == "Spades" and self.ability.set == "Enhanced" and next(SMODS.find_card('j_zero_skye')) then
 		return true
 	end
 	if zero_has_any_regular_suit(self) then
@@ -401,4 +418,19 @@ function ease_ante(mod)
 	if not next(SMODS.find_card('j_zero_time_walk')) then
 		return alias_ease_ante(mod)
 	end
+end
+
+local alias__Card_calculate_joker = Card.calculate_joker
+function Card:calculate_joker(context)
+	local ret, post = alias__Card_calculate_joker(self, context)
+	if context.joker_main and not context.blueprint and not self.debuff and self.ability.zero_ond then
+		local scored = zero_ond_score(self)
+		if scored then
+			if not ret then return scored, post end
+			local tail = ret
+			while tail.extra do tail = tail.extra end
+			tail.extra = scored
+		end
+	end
+	return ret, post
 end
