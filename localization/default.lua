@@ -360,9 +360,8 @@ local loc_stuff = {
         c_zero_code_fu = {
             name = "Code Fu",
             text = {
-                "Creates the {C:attention}best possible{}",
-                "card for the current situation",
-                "{C:inactive}(Must have room)",
+                "Wish for the",
+				"{C:legendary,E:1}perfect card"
             },
         },
         c_zero_moonstone = {
@@ -991,8 +990,9 @@ local loc_stuff = {
         name = {"Flower of Knowledge",
 				"{s:0.5}Nox Orchid"},
         text = {
-			"{C:attention}Removes{} the cap on interest",
-			"earned in each round"
+			"At end of round, gains {C:attention}sell value{}",
+			"equal to the {C:money}interest{} you would",
+			"earn {C:attention}above{} the interest cap"
         },
       },
 	  j_zero_croque_madame = {
@@ -1048,9 +1048,9 @@ local loc_stuff = {
         name = "Soda Shake",
         text = {
 			{
-			"Gains {C:mult}+#1#{} Mult at end of round.",
-			"After {C:attention}#3#{} rounds, {C:green}#4# in #5#{} chance to {C:attention}pop{}",
-			"at end of round, creating a random {C:attention}Tag{}",
+			"Gains {C:mult}+#1#{} Mult at end of round,",
+			"after {C:attention}#3#{} rounds, {C:green}#4# in #5#{} chance to {C:attention}pop{}",
+			"at end of round and create a random {C:attention}Tag{}",
 			"{C:inactive}(Currently {C:mult}+#2#{C:inactive} Mult)",
           }
         },
@@ -1532,6 +1532,15 @@ local loc_stuff = {
 			"a random {C:attention}non-Face {C:clubs}Club"
         },
       },
+	  j_zero_rejoker = {
+        name = "RE->JOKER",
+        text = {
+			"{C:green}#1# in #2#{} chance to add a copy of a",
+            "random {C:attention}played{} card to scoring,",
+			"chance increases by {C:attention}#3#{} per hand,",
+			"resets at end of round"
+        },
+      },
 	  j_zero_majesty_colors = {
         name = "Majesty of Colors",
         text = {
@@ -1623,6 +1632,50 @@ local loc_stuff = {
 		unlock = {
             "Beat the",
             "{C:attention}Edge of Space",
+            "challenge"
+        }
+      },
+	  j_zero_avide = {
+        name = {"Avide, the Wanting",
+				"{s:0.5}Lord of Gluttony"},
+        text = {
+			"Played {V:1}#3#{} have a {C:green}#1# in #2#{}",
+			"chance to create a random",
+			"{C:dark_edition}Negative{} {C:attention}Food{} Joker when scored",
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Forever Feast",
+            "challenge"
+        }
+      },
+	  j_zero_conlasse = {
+        name = {"Conlasse, the Treasurer",
+				"{s:0.5}Secretary of Greed"},
+        text = {
+			"Played {V:1}#2#{} earn",
+			"{C:money}$#1#{} when scored,",
+			"{C:attention}no cap{} on interest",
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Glittering and Golden",
+            "challenge"
+        }
+      },
+	  j_zero_tachtyk = {
+        name = {"Tachtyk, the Juggernaut",
+				"{s:0.5}Commander of Wrath"},
+        text = {
+			"Destroys all played cards",
+			"that are not {V:1}#3#{},",
+			"gains {X:mult,C:white}X#1#{} Mult for every",
+			"playing card {C:attention}destroyed",
+			"{C:inactive}(currently {X:mult,C:white}X#2#{C:inactive} Mult)"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}The Most Dangerous Game",
             "challenge"
         }
       },
@@ -2556,6 +2609,13 @@ local loc_stuff = {
 			"and {C:attention}LOLA{} are together"
 		},
 	  },
+	  zero_russian_roulette = {
+		name = "Russian Roulette",
+		text = {
+			"{C:green}#1# in #2#{} chance to",
+			"{C:red}end the run{} when scored",
+		},
+	  },
 	  zero_yixi_mai = {
 		name = "Synergy!",
 		text = {
@@ -2584,6 +2644,9 @@ local loc_stuff = {
 	  k_plus_elemental = "+1 Element",
 	  k_plus_consumeable = "+1 Consumable",
 	  k_plus_suit_yourself = "+1 Suit Yourself",
+	  k_zero_bang = "BANG!",
+	  k_zero_click = "*click*",
+	  k_zero_loaded = "Loaded!",
 	  k_plus_sunsteel_pow = "+Sunsteel Power",
       k_poisoned_ex = "Poisoned!",
       k_charged_ex = "Charged!",
@@ -2666,6 +2729,13 @@ local loc_stuff = {
 	  ch_c_zero_level_zero = {"All hands start at level {C:attention}0"},
 	  ch_c_zero_patron_unlock = {"Challenge unlocks a {C:patron}Patron Joker"},
 	  ch_c_zero_win_ante = {"Beat Ante {C:attention}#1#{} to win"},
+	  ch_c_zero_hand_dollar_cap = {"Hand {C:attention}scores{} cannot exceed the current {C:money}$"},
+	  ch_c_zero_no_interest_cap = {"No cap on {C:money}interest"},
+	  ch_c_zero_inflation = {"{C:money}Rampant Inflation{}"},
+	  ch_c_zero_only_food ={"Only {C:attention}Food{} Jokers appear"},
+	  ch_c_zero_no_cups = {"{C:cups}Cups{} cards do not appear in the shop"},
+	  ch_c_zero_no_elemental = {"{C:elemental}Elemental{} cards do not appear in the shop"},
+	  ch_c_zero_russian_roulette = {"After scoring, every {C:attention}played{} card gains {C:red}Russian Roulette"},
 	},
 	suits_singular = {
 	  zero_Brights = "Bright",
@@ -2679,9 +2749,13 @@ local loc_stuff = {
 		c_zero_no_man = "No Man Can Make It Fall",
 		c_zero_black_hole_sun = "Black Hole Sun",
 		c_zero_edge_of_space = "Edge of Space",
+		c_zero_most_dangerous_game = "The Most Dangerous Game",
+		c_zero_forever_feast = "Forever Feast",
+		c_zero_glittering_golden = "Glittering and Golden",
 	},
 	labels = {
 		zero_gala = "Gala",
+		zero_russian_roulette = "Russian Roulette",
 		zero_occult = "Occult",
     zero_redjewel = 'Red Gem',
     zero_orangejewel = 'Orange Gem',

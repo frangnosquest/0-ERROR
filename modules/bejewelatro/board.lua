@@ -106,6 +106,6 @@ end
 local start_run_ref = Game.start_run
 function Game:start_run(args)
     start_run_ref(self, args)
-    if not saveTable then Bejewelatro.board_pos.y = 20 end
+    if not (args and args.savetext) then Bejewelatro.board_pos.y = 20 end
     if G.STATE == G.STATES.SELECTING_HAND and do_bejewelatro() then Bejewelatro.board_visible = true end
 end

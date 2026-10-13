@@ -605,60 +605,41 @@ SMODS.Consumable{
 	end,
 	can_use = function(self, card)
 		if G.jokers then
-			local glitches = {}
-			local foundglitches = {}
-			for _, v in pairs(G.P_CENTER_POOLS["Joker"]) do
-				if v.zero_glitch then
-					glitches[#glitches + 1] = v.key
-				end
-			end
-			for _, v in pairs(G.jokers.cards) do
-				if not v.edition then
-					for _, w in pairs(glitches) do
-						if v.config.center.key == w then
-							foundglitches[#foundglitches + 1] = v
-						end
-					end
-				end
-			end
-			return #foundglitches > 0 or (#G.jokers.cards < G.jokers.config.card_limit)
+			return #zero_cups_page_targets() > 0 or #G.jokers.cards < G.jokers.config.card_limit
 		end
     end,
 	use = function(self, card)
-		local glitches = {}
-		local foundglitches = {}
-		for _, v in pairs(G.P_CENTER_POOLS["Joker"]) do
-			if v.zero_glitch and (v.key ~= "j_zero_missingno"
-			or (v.key == "j_zero_missingno" and G.jokers and G.jokers.cards[6] and G.jokers.cards[6].config.center.key ~= "j_zero_missingno" and G.jokers.cards[6].config.center.key ~= "j_zero_q_triangle" and pseudorandom('cups_page') < 1 / 4))then
-				glitches[#glitches + 1] = v.key
-			end
+		local targets = zero_cups_page_targets()
+		if #targets > 0 then
+			pseudorandom_element(targets, "cups_page"):set_edition("e_zero_gala", true)
+			return
 		end
-		for _, v in pairs(G.jokers.cards) do
-			if not v.edition then
-				for _, w in pairs(glitches) do
-					if v.config.center.key == w or v.config.center.key == "j_zero_missingno" then
-						foundglitches[#foundglitches + 1] = v
-					end
-				end
-			end
-		end
-		if #foundglitches > 0 then
-			pseudorandom_element(foundglitches, "cups_page"):set_edition("e_zero_gala", true)
-		else
-			G.E_MANAGER:add_event(Event({
-				trigger = 'after',
-				delay = 0.4,
-				func = function()
+		local missingno = G.P_CENTERS.j_zero_missingno
+		local pool_size = #SMODS.get_clean_pool('zero_Glitch', nil, nil, 'cups_page')
+		local key = missingno:in_pool() and pseudorandom('cups_page_missingno') < 1 / (4 * (pool_size + 1)) and missingno.key or nil
+		G.E_MANAGER:add_event(Event({
+			trigger = 'after',
+			delay = 0.4,
+			func = function()
 				play_sound('timpani')
-				SMODS.add_card({ set = 'Joker', key = pseudorandom_element(glitches, "cups_page")})
+				SMODS.add_card({ set = 'zero_Glitch', key = key, key_append = 'cups_page' })
 				card:juice_up(0.3, 0.5)
 				return true
-            end
-			}))
-			delay(0.6)
-		end
+			end
+		}))
+		delay(0.6)
     end
 }
+
+function zero_cups_page_targets()
+	local targets = {}
+	for _, v in ipairs(G.jokers.cards) do
+		if not v.edition and zero_is_glitch(v.config.center) then
+			targets[#targets + 1] = v
+		end
+	end
+	return targets
+end
 
 SMODS.Consumable{
     set = 'Cups',

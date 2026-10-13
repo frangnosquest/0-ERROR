@@ -47,3 +47,23 @@ CardPronouns.Pronoun {
 	end,
 	key = "she_they"
 }
+
+CardPronouns.Pronoun {
+	colour = SMODS.Gradients.zero_she_he,
+    text_colour = G.C.WHITE,
+    pronoun_table = { "She", "He" },
+	in_pool = function()
+		return false
+	end,
+	key = "she_he"
+}
+
+CardPronouns.Pronoun {
+	colour = HEX("6FA0E8"),
+    text_colour = G.C.WHITE,
+    pronoun_table = { "He", "Any" },
+	in_pool = function()
+		return false
+	end,
+	key = "he_any"
+}

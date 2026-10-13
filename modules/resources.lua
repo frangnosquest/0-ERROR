@@ -213,6 +213,10 @@ G.C.PATRON = SMODS.Gradient {
     key = 'patron',
     colours = { HEX("0A192F"), HEX("4B0082"), HEX("D4AF37") }
 }
+SMODS.Gradient {
+    key = 'she_he',
+    colours = { HEX("FF90E8"), HEX("7FB2FF") }
+}
 
 local ref_loc_colour = loc_colour
 function loc_colour(_c, _default)
@@ -229,4 +233,10 @@ SMODS.Sound{
     pitch = 1.0, 
     key = "cork_pop", 
     path = "cork_pop.ogg",
+}
+SMODS.Sound{
+     vol = 1.0,
+    pitch = 1.0, 
+    key = "gunshot", 
+    path = "gunshot.ogg",
 }
