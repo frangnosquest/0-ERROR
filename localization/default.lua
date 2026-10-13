@@ -1641,7 +1641,7 @@ local loc_stuff = {
         text = {
 			"Played {V:1}#3#{} have a {C:green}#1# in #2#{}",
 			"chance to create a random",
-			"{C:dark_edition}Negative{} {C:attention}Food{} Joker when scored",
+			"{C:dark_edition}Negative{} {C:attention}Food Joker{} when scored",
         },
 		unlock = {
             "Beat the",
