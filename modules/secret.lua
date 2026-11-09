@@ -68,20 +68,12 @@ G.zero_soshi_list_items = {
     { text = "zero_sc_hint_jericho", center = "j_zero_jericho", password = "zombiesonyourlawn" },
     { text = "zero_sc_hint_oulala", center = "j_zero_oulala", password = "spaceball" },
     { text = "zero_sc_hint_", center = "j_zero_darkasso", password = "cellardoor" },
+    { text = "zero_sc_hint_channeler", center = "j_zero_channeler", password = "saligia" },
+    { text = "zero_sc_hint_no_default_voice", center = "j_zero_no_default_voice", password = "daisydaisy" },
 }
 
 function G.UIDEF.zero_soshi_wrapper()
-    local content = UIBox({
-        definition = G.UIDEF.zero_soshi_content(),
-        config = {type = "cm"}
-    })
-    return {
-        n = G.UIT.ROOT,
-        config = {align = "cm", colour = G.C.CLEAR},
-        nodes = {
-            {n = G.UIT.O, config = {id = "zs_content_box", object = content}}
-        }
-    }
+    return G.UIDEF.zero_soshi_content()
 end
 
 function G.UIDEF.zero_soshi_content()
@@ -222,28 +214,23 @@ function G.UIDEF.zero_soshi_content()
 end
 
 local function refresh_zero_soshi_ui()
-    if G.OVERLAY_MENU then
-        local content_node = G.OVERLAY_MENU:get_UIE_by_ID("zs_content_box")
-        if content_node then
-            if content_node.config.object then
-                content_node.config.object:remove()
-            end
-            local new_uibox = UIBox({
-                definition = G.UIDEF.zero_soshi_content(),
-                config = {parent = content_node, type = "cm"}
-            })
-            content_node.config.object = new_uibox
-            new_uibox:recalculate()
-            G.OVERLAY_MENU:recalculate()
-        end
+    if not G.OVERLAY_MENU then return end
+    local tab_contents = G.OVERLAY_MENU:get_UIE_by_ID("tab_contents")
+    if not tab_contents then return end
+    if tab_contents.config.object then
+        tab_contents.config.object:remove()
     end
+    tab_contents.config.object = UIBox({
+        definition = G.UIDEF.zero_soshi_content(),
+        config = {offset = {x = 0, y = 0}, parent = tab_contents, type = "cm"}
+    })
+    tab_contents.UIBox:recalculate()
 end
 
 G.FUNCS.zs_prev_page = function(e)
     if G.zero_soshi_page > 1 then
         G.zero_soshi_page = G.zero_soshi_page - 1
-        refresh_zero_soshi_ui(e)
-		G.OVERLAY_MENU:recalculate() --i must be stupid cause for some reason the overlay just doesn't properly resize without this even if it does that in the refresh function already
+        refresh_zero_soshi_ui()
     end
 end
 
@@ -252,14 +239,12 @@ G.FUNCS.zs_next_page = function(e)
     if G.zero_soshi_page < total_pages then
         G.zero_soshi_page = G.zero_soshi_page + 1
         refresh_zero_soshi_ui()
-        G.OVERLAY_MENU:recalculate()
     end
 end
 
 G.FUNCS.trigger_zs_condition = function(e)
     G.zero_soshi_condition_met = true
-    refresh_zero_soshi_ui(e)
-	G.OVERLAY_MENU:recalculate()
+    refresh_zero_soshi_ui()
 end
 
 G.FUNCS.submit_zs_text = function(e)
@@ -287,9 +272,6 @@ G.FUNCS.submit_zs_text = function(e)
     end
     G.zero_soshi_input_text = ""
     refresh_zero_soshi_ui()
-    if G.OVERLAY_MENU then
-        G.OVERLAY_MENU:recalculate()
-    end
 end
 
 --Joker petting made by bepisfever, referenced from partner api
@@ -332,33 +314,6 @@ function math.sign(x)
     end
 end
 
-local centerX, centerY = 0, 0 
-local tracking = false          
-local totalAngle = 0            
-local prevAngle = nil           
-local minRadius = 0.5            
-local resetTime = 0.2
-local countedTime = 0
-local petTime = 0
-local hoveredCard = nil
-
-local ref = Card.hover
-function Card:hover()
-    tracking = true
-    hoveredCard = self
-    local ret = ref(self)
-    return ret
-end
-
-local ref = Card.stop_hover
-function Card:stop_hover()
-    if hoveredCard == self then
-        tracking = false
-        hoveredCard = nil
-    end
-    local ret = ref(self)
-    return ret
-end
 
 local ref = love.update
 function love.update(dt)
@@ -398,7 +353,7 @@ function love.update(dt)
 					SMODS.calculate_context({pet_card = hoveredCard, pet_time = petTime, pet_direction = (totalAngle > 0 and "clockwise" or "counter-clockwise")})
 					if hoveredCard.config.center.key == "j_zero_soshi" then
 						play_sound('zero_meow', 1.2 + math.random()*0.1, 0.5)
-						if G.zero_soshi_area and G.zero_soshi_area.cards then
+						if not G.zero_soshi_condition_met and G.zero_soshi_area and hoveredCard.area == G.zero_soshi_area then
 							unlock_card(hoveredCard.config.center)
 							discover_card(hoveredCard.config.center)
 							hoveredCard.config.center.no_collection = false
@@ -523,6 +478,18 @@ SMODS.Joker {
     end
 }
 
+local function zero_oulala_digits(n)
+	if type(n) == 'number' then
+		if n ~= n then return 1 end
+		if n >= 1.8e308 then return 309 end
+		n = math.floor(n)
+		if n < 1 then return 1 end
+		return math.floor(math.log10(n)) + 1
+	end
+	if n.log10 then return math.floor(to_number(n:log10())) + 1 end
+	return 1
+end
+
 SMODS.Joker {
     key = "oulala",
 	atlas = "zero_secret_jokers",
@@ -535,28 +502,33 @@ SMODS.Joker {
     cost = 12,
 	unlocked = false,
 	no_collection = true,
-	config = { extra = { mult = 15, xmult = 4, storage = 0, storage2 = 0 } },
+	config = { extra = { mult = 15, xmult = 4, started = {}, finished = {}, first = {}, diff = {} } },
 	loc_vars = function(self, info_queue, card)
         return { vars = { card.ability.extra.mult, card.ability.extra.xmult } }
     end,
 	calculate = function(self, card, context)
-        if context.individual and context.cardarea == G.play and context.other_card == context.scoring_hand[1] then
-			card.ability.extra.storage = #tostring(mult + card.ability.extra.mult)
-			SMODS.calculate_effect({
-					mult = card.ability.extra.mult,
-			}, context.blueprint_card or card)
+		local extra = card.ability.extra
+		local actor = context.blueprint_card or card
+		local id = actor.sort_id
+		if context.before and not context.blueprint then
+			extra.started, extra.finished, extra.first, extra.diff = {}, {}, {}, {}
 		end
-		if context.individual and context.cardarea == G.play and context.other_card == context.scoring_hand[#context.scoring_hand] then
-			card.ability.extra.storage2 = #tostring(mult*card.ability.extra.xmult) - card.ability.extra.storage
-			return {
-				xmult = card.ability.extra.xmult,
-				card = card
-			}
+		if context.individual and context.cardarea == G.play then
+			if context.other_card == context.scoring_hand[1] and not extra.started[id] then
+				extra.started[id] = true
+				extra.first[id] = zero_oulala_digits(mult + extra.mult)
+				SMODS.calculate_effect({ mult = extra.mult }, actor)
+			end
+			if context.other_card == context.scoring_hand[#context.scoring_hand] then
+				if not extra.finished[id] then
+					extra.finished[id] = true
+					extra.diff[id] = math.max(0, zero_oulala_digits(mult * extra.xmult) - (extra.first[id] or zero_oulala_digits(mult)))
+				end
+				return { xmult = extra.xmult }
+			end
 		end
 		if context.forcetrigger or context.joker_main then
-			return {
-                xmult = card.ability.extra.storage2 >= 1 and card.ability.extra.storage2 or 1
-            }
+			return { xmult = math.max(1, extra.diff[id] or 1) }
 		end
 	end,
 	check_for_unlock = function(self, args)
@@ -617,3 +589,179 @@ SMODS.Joker {
         end
 	end
 }
+
+local zero_sin_challenge_keys = {
+	"c_zero_most_dangerous_game",
+	"c_zero_glittering_golden",
+	"c_zero_forever_feast",
+	"c_zero_love_me_forever",
+	"c_zero_dont_forget_me",
+	"c_zero_lotus_eater",
+	"c_zero_world_revolving",
+	"c_zero_50000_shades_of_grey",
+}
+
+function zero_channeler_unleash(card, key, sin)
+	for _, joker in ipairs(G.jokers.cards) do
+		if joker.config.center.key == key then return false end
+	end
+	card.ability.extra.unleashed = true
+	card_eval_status_text(card, 'extra', nil, nil, nil, { message = localize('k_zero_sin_' .. sin), colour = G.C.PATRON })
+	G.E_MANAGER:add_event(Event({
+		func = function()
+			card:start_dissolve({ G.C.PATRON })
+			local patron = SMODS.add_card({ key = key, area = G.jokers, key_append = 'zero_channeler' })
+			card_eval_status_text(patron, 'extra', nil, nil, nil, { message = localize('k_zero_unleashed_ex'), colour = G.C.PATRON })
+			return true
+		end
+	}))
+	return true
+end
+
+SMODS.Joker {
+	key = "channeler",
+	atlas = "zero_secret_jokers",
+	pos = { x = 4, y = 0 },
+	soul_pos = { x = 4, y = 1 },
+	hidden_pos = { x = 4, y = 2 },
+	hidden_soul_pos = { x = 4, y = 3 },
+	rarity = "zero_secret",
+	blueprint_compat = false,
+	cost = 15,
+	unlocked = false,
+	no_collection = true,
+	config = { extra = { dollars = 50, destroyed = 0, destroyed_needed = 5, skips = 0, skips_needed = 2, consumed = 0, consumed_needed = 3, hearts_needed = 5, pride = 5 } },
+	loc_vars = function(self, info_queue, card)
+		return { key = math.random() < 0.5 and "j_zero_channeler_vice" or "j_zero_channeler" }
+	end,
+	calculate = function(self, card, context)
+		local extra = card.ability.extra
+		if context.blueprint or extra.unleashed then return end
+		if context.setting_blind then
+			extra.skips = 0
+		end
+		if context.starting_shop or context.ending_shop then
+			extra.consumed = 0
+		end
+		if context.end_of_round and context.game_over == false and context.main_eval and G.GAME.dollars + (G.GAME.dollar_buffer or 0) >= extra.dollars then
+			zero_channeler_unleash(card, "j_zero_conlasse", "greed")
+		elseif context.remove_playing_cards and context.removed then
+			extra.destroyed = extra.destroyed + #context.removed
+			if extra.destroyed >= extra.destroyed_needed then
+				zero_channeler_unleash(card, "j_zero_tachtyk", "wrath")
+			end
+		elseif context.skip_blind then
+			extra.skips = extra.skips + 1
+			if extra.skips >= extra.skips_needed then
+				zero_channeler_unleash(card, "j_zero_reffa", "sloth")
+			end
+		elseif context.selling_card and context.card ~= card and context.card.ability.set == "Joker" then
+			local others = 0
+			for _, joker in ipairs(G.jokers.cards) do
+				if joker ~= card and joker ~= context.card then
+					others = others + 1
+				end
+			end
+			if others == 0 then
+				zero_channeler_unleash(card, "j_zero_ivan", "envy")
+			end
+		elseif context.using_consumeable and G.shop then
+			extra.consumed = extra.consumed + 1
+			if extra.consumed >= extra.consumed_needed then
+				zero_channeler_unleash(card, "j_zero_avide", "gluttony")
+			end
+		elseif context.before and #context.scoring_hand >= extra.hearts_needed then
+			for _, scored in ipairs(context.scoring_hand) do
+				if not scored:is_suit("Hearts") then return end
+			end
+			zero_channeler_unleash(card, "j_zero_orched", "lust")
+		elseif context.after then
+			local score = SMODS.last_hand_score or SMODS.calculate_round_score()
+			if score >= G.GAME.blind.chips * extra.pride then
+				zero_channeler_unleash(card, "j_zero_egeo", "pride")
+			elseif context.scoring_name == "High Card" and G.GAME.current_round.hands_left <= 0 and G.GAME.chips + score < G.GAME.blind.chips then
+				if zero_channeler_unleash(card, "j_zero_kana", "despair") then
+					ease_hands_played(G.GAME.current_round.hands_played + 1)
+				end
+			end
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type ~= 'win_challenge' then return false end
+		local completed = G.PROFILES[G.SETTINGS.profile].challenge_progress.completed
+		for _, key in ipairs(zero_sin_challenge_keys) do
+			if not completed[key] then
+				return false
+			end
+		end
+		discover_card(G.P_CENTERS["j_zero_channeler"])
+		G.P_CENTERS["j_zero_channeler"].no_collection = false
+		return true
+	end,
+	pronouns = "empty"
+}
+
+local zero_mod = SMODS.current_mod
+local zero_synth_triggers_needed = 100
+local old_calculate_joker = Card.calculate_joker
+function Card:calculate_joker(context)
+	local ret, post = old_calculate_joker(self, context)
+	if type(ret) == "table" and next(ret) and not self.debuff and zero_is_vocal_synth(self.config.center) then
+		zero_config.synth_triggers = (zero_config.synth_triggers or 0) + 1
+		local no_default_voice = G.P_CENTERS.j_zero_no_default_voice
+		if zero_config.synth_triggers >= zero_synth_triggers_needed and no_default_voice and not no_default_voice.unlocked then
+			check_for_unlock({ type = 'zero_synth_triggers' })
+		end
+	end
+	return ret, post
+end
+
+local old_end_round = end_round
+function end_round()
+	old_end_round()
+	SMODS.save_mod_config(zero_mod)
+end
+
+SMODS.Joker {
+	key = "no_default_voice",
+	atlas = "zero_secret_jokers",
+	pos = { x = 0, y = 2 },
+	soul_pos = { x = 0, y = 3 },
+	hidden_pos = { x = 4, y = 2 },
+	hidden_soul_pos = { x = 4, y = 3 },
+	rarity = "zero_secret",
+	blueprint_compat = true,
+	cost = 15,
+	unlocked = false,
+	no_collection = true,
+	calculate = function(self, card, context)
+		if context.end_of_round and context.game_over == false and context.main_eval and G.GAME.blind.boss then
+			G.E_MANAGER:add_event(Event({
+				func = function()
+					SMODS.add_card({ set = 'zero_VocalSynth', edition = 'e_negative', key_append = 'zero_no_default_voice' })
+					return true
+				end
+			}))
+			return {
+				message = localize('k_plus_joker'),
+				colour = G.C.DARK_EDITION
+			}
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'zero_synth_triggers' and (zero_config.synth_triggers or 0) >= zero_synth_triggers_needed then
+			discover_card(G.P_CENTERS["j_zero_no_default_voice"])
+			G.P_CENTERS["j_zero_no_default_voice"].no_collection = false
+			SMODS.save_mod_config(zero_mod)
+			return true
+		end
+		return false
+	end,
+	pronouns = "it_its"
+}
+
+SMODS.Joker:take_ownership('smiley', {
+	loc_vars = function(self, info_queue, card)
+		return { key = math.random(20) == 1 and 'j_zero_verity' or nil, vars = { card.ability and card.ability.extra or self.config.extra } }
+	end,
+}, true)

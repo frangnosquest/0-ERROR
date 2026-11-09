@@ -1,0 +1,9 @@
+{
+	"name": "0_ERROR",
+	"description": "A big content mod adding over 140 Jokers, an exotic suit, new consumable types, challenges with actual rewards, a new side mode and a lot more.",
+	"version_number": "1.0.0",
+	"website_url": "https://github.com/frangnosquest/0-ERROR",
+	"dependencies": [
+		"Steamodded-Steamodded-26.1002.0"
+	]
+}

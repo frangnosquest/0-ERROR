@@ -287,11 +287,14 @@ SMODS.Consumable{
 						end
 						if _target.edition then
 							v:set_edition(_target.edition,true)
+							v.zhorie = _target.zhorie
 						end
 					end
 					_target:set_ability('c_base')
 					_target:set_seal()
 					_target:set_edition()
+					_target.zhorie = nil
+					zero_zhorie_sweep({_target})
 					return true end }))
 					G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.15,func = function()
 					for _, v in pairs(to_buff) do
@@ -468,6 +471,33 @@ SMODS.Consumable{
     end
 }
 
+local function zero_cups_nine_from_deck(field, seed, excluded)
+	local counts, keys = {}, {}
+	for _, v in ipairs(G.playing_cards or {}) do
+		local key
+		if field == "enhancement" then
+			key = v.ability.set == "Enhanced" and v.config.center.key
+		else
+			key = v.edition and v.edition.key
+		end
+		local center = key and G.P_CENTERS[key]
+		if center and not center.no_collection and key ~= excluded then
+			if not counts[key] then keys[#keys + 1] = key end
+			counts[key] = (counts[key] or 0) + 1
+		end
+	end
+	if #keys == 0 then return end
+	table.sort(keys)
+	local total = 0
+	for _, k in ipairs(keys) do total = total + counts[k] end
+	local roll = pseudorandom(seed) * total
+	for _, k in ipairs(keys) do
+		roll = roll - counts[k]
+		if roll <= 0 then return k end
+	end
+	return keys[#keys]
+end
+
 SMODS.Consumable{
     set = 'Cups',
 	atlas = 'zero_cups',
@@ -477,6 +507,8 @@ SMODS.Consumable{
 		max_highlighted = 1,
 	},
 	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue + 1] = G.P_CENTERS.m_zero_sunsteel
+		info_queue[#info_queue + 1] = G.P_CENTERS.e_polychrome
         return { vars = { card.ability.max_highlighted, card.ability.max_highlighted == 1 and "" or "s"} }
     end,
 	use = function(self, card)
@@ -484,11 +516,12 @@ SMODS.Consumable{
 		for i = 1, #G.hand.highlighted do
 			if G.hand.highlighted[i].config.center and G.hand.highlighted[i].config.center.key ~= "c_base" then
 				if not G.hand.highlighted[i].edition then
+					local _edition = pseudorandom("zero_cups_nine_edition") < 0.5 and "e_polychrome" or zero_cups_nine_from_deck("edition", "zero_cups_nine_edition_deck", "e_negative") or SMODS.poll_edition({key = "zero_cups_nine_edition_roll", guaranteed = true, no_negative = true})
 					G.E_MANAGER:add_event(Event({
 						trigger = 'after',
 						delay = 0.4,
 						func = function()
-						G.hand.highlighted[i]:set_edition("e_polychrome",true)
+						G.hand.highlighted[i]:set_edition(_edition,true)
 						card:juice_up(0.3, 0.5)
 						return true
 						end
@@ -521,9 +554,10 @@ SMODS.Consumable{
 					end
 				end
 			else
+				local _enhancement = pseudorandom("zero_cups_nine_enhancement") < 0.5 and "m_zero_sunsteel" or zero_cups_nine_from_deck("enhancement", "zero_cups_nine_enhancement_deck") or SMODS.poll_enhancement({key = "zero_cups_nine_enhancement_roll", guaranteed = true})
 				G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.15,func = function() G.hand.highlighted[i]:flip();play_sound('card1');G.hand.highlighted[i]:juice_up(0.3, 0.3);return true end }))
 				delay(0.2)
-				G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.1,func = function() G.hand.highlighted[i]:set_ability("m_steel");return true end }))
+				G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.1,func = function() G.hand.highlighted[i]:set_ability(_enhancement);return true end }))
 				G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.15,func = function() G.hand.highlighted[i]:flip();play_sound('tarot2', nil, 0.6);G.hand.highlighted[i]:juice_up(0.3, 0.3);return true end }))
 			end
 		end

@@ -9,17 +9,21 @@ function zero_brights_in_deck()
 	return false
 end
 
+function zero_is_secret_bright(card)
+	if not G.jokers or not card.sort_id then return false end
+	for k, v in pairs(G.jokers.cards) do
+		if v.config.center.key == "j_zero_found_a_star" and v.ability.extra.placed == card.sort_id then
+			return true
+		end
+	end
+	return false
+end
+
 function zero_has_any_regular_suit(card)
 	if SMODS.has_no_suit(card) then return false end
 	if SMODS.has_any_suit(card) then return true end
 	if card.base and card.base.suit == "zero_Brights" then return true end
-	if card.zero_secret_bright then
-		for k, v in pairs(G.jokers.cards) do
-			if v.config.center.key == "j_zero_found_a_star" and v.ability.extra.placed and v.ability.extra.placed == card.zero_secret_bright then
-				return true
-			end
-		end
-	end
+	if zero_is_secret_bright(card) then return true end
 	-- WARNING may break with quantum enhancements enabled
 	-- (hopefully doesnt :fingers_crossed:)
 	if SMODS.has_enhancement(card, "m_zero_suit_yourself") then
@@ -183,8 +187,8 @@ end
 local bit = require("bit")
 function zero_needlesslycomplexrandomchips(seed)
     local t = os.clock() * 10000
-    local s = tostring({}):sub(8)
-    local why = tonumber(s, 16) or 1
+    local s = tostring({}):match("0x(%x+)") or ""
+    local why = tonumber(s:sub(-8), 16) or 1
     local x = (seed or math.random())
     x = x * t + why
     x = bit.bxor(x, bit.lshift(x, 1))

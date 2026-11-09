@@ -5,7 +5,7 @@ function Card:highlight(is_higlighted)
 	local exists = self.children.use_button ~= nil
 	local ret = cardhighlighthook(self, is_higlighted)
 
-	if self.config.center.zero_usable and self.area and self.area ~= G.pack_cards then
+	if (self.config.center.zero_usable or self.config.center.zero_view_button) and self.area and self.area ~= G.pack_cards then
 		if self.highlighted and self.area and self.area.config.type ~= 'shop' and (self.area == G.jokers or self.area == G.consumeables) then
 			if self.children.use_button then
 				self.children.use_button:remove()
@@ -89,14 +89,16 @@ function G.UIDEF.zeroerror_joker_use_buttons(card, use_button)
 				sell
 			}
 		},
-		{
+	}
+	if card.config.center.zero_usable then
+		rows[#rows + 1] = {
 			n = G.UIT.R,
 			config = { align = 'cl' },
 			nodes = {
 				use
 			}
-		},
-	}
+		}
+	end
 	if card.config.center.key == "j_zero_perma_monster" then
 		rows[#rows + 1] = {
 			n = G.UIT.R,
@@ -108,6 +110,23 @@ function G.UIDEF.zeroerror_joker_use_buttons(card, use_button)
 					nodes = {
 						{ n = G.UIT.B, config = { w = 0.1, h = 0.4 } },
 						{ n = G.UIT.T, config = { text = localize('b_zero_absorbed'), colour = G.C.UI.TEXT_LIGHT, scale = 0.35, shadow = true } }
+					}
+				}
+			}
+		}
+	end
+	local view = card.config.center.zero_view_button
+	if view then
+		rows[#rows + 1] = {
+			n = G.UIT.R,
+			config = { align = 'cl' },
+			nodes = {
+				{
+					n = G.UIT.C,
+					config = { ref_table = card, align = "cm", maxw = 1.25, padding = 0.1, r = 0.08, minw = 1.25, hover = true, shadow = true, colour = view.colour or G.C.BLUE, button = view.button },
+					nodes = {
+						{ n = G.UIT.B, config = { w = 0.1, h = 0.4 } },
+						{ n = G.UIT.T, config = { text = localize(view.label), colour = G.C.UI.TEXT_LIGHT, scale = 0.35, shadow = true } }
 					}
 				}
 			}
@@ -127,11 +146,36 @@ function G.UIDEF.zeroerror_joker_use_buttons(card, use_button)
 	return t
 end
 
+local zero_align_cards = CardArea.align_cards
+function CardArea:align_cards()
+	if self ~= G.hand then
+		return zero_align_cards(self)
+	end
+	local all, visible, hidden = self.cards, {}, false
+	for _, v in ipairs(all) do
+		if v.zero_dragee_pending then
+			hidden = true
+		else
+			visible[#visible + 1] = v
+		end
+	end
+	if not hidden then
+		return zero_align_cards(self)
+	end
+	self.cards = visible
+	local ret = zero_align_cards(self)
+	self.cards = all
+	return ret
+end
+
 local zero_calculate_round_score = SMODS.calculate_round_score
 SMODS.calculate_round_score = function(flames)
   local score = zero_calculate_round_score(flames)
   if G.GAME.modifiers.zero_hand_dollar_cap then
     score = math.min(score, math.max(G.GAME.dollars + (G.GAME.dollar_buffer or 0), 0))
+  end
+  if G.GAME.modifiers.zero_world_revolving and G.GAME.zero_best_before_hand and score <= G.GAME.zero_best_before_hand then
+    score = 0
   end
   return score
 end
@@ -404,6 +448,32 @@ function Card:generate_UIBox_ability_table(...)
   return zero_generate_UIBox_ability_table(self, ...)
 end
 
+local function zero_update_score_to_beat(game)
+  local show = G.GAME and G.GAME.modifiers and G.GAME.modifiers.zero_world_revolving
+    and game.STATE == game.STATES.SELECTING_HAND
+    and G.hand and G.hand.highlighted and #G.hand.highlighted > 0
+  local text = show and localize({ type = "variable", key = "zero_score_to_beat", vars = { number_format(G.GAME.round_scores.hand.amt) } })
+  local state = text and (text .. (G.boss_throw_hand and "_boss" or ""))
+  if game.zero_score_to_beat_box and game.zero_score_to_beat_text ~= state then
+    game.zero_score_to_beat_box:remove()
+    game.zero_score_to_beat_box = nil
+    game.zero_score_to_beat_text = nil
+  end
+  if text and not game.zero_score_to_beat_box then
+    game.zero_score_to_beat_box = UIBox {
+      definition = { n = G.UIT.ROOT, config = { align = 'cm', colour = G.C.CLEAR, padding = 0.2 }, nodes = {
+        { n = G.UIT.R, config = { align = 'cm', maxw = 1 }, nodes = {
+          { n = G.UIT.O, config = { object = DynaText({ scale = 0.7, string = text, maxw = 9, colours = { G.C.WHITE }, float = true, shadow = true, silent = true, pop_in = 0, pop_in_rate = 6 }) } },
+        } },
+      } },
+      config = { align = 'cm', offset = { x = 0, y = G.boss_throw_hand and -4.6 or -3.1 }, major = G.play }
+    }
+    game.zero_score_to_beat_box.attention_text = true
+    game.zero_score_to_beat_box.states.collide.can = false
+    game.zero_score_to_beat_text = state
+  end
+end
+
 local zero_game_update = Game.update
 function Game:update(dt)
   zero_game_update(self, dt)
@@ -433,6 +503,7 @@ function Game:update(dt)
       G.hand.config.highlighted_limit = limit
     end
   end
+  zero_update_score_to_beat(self)
 end
 
 -- pulled from Entropy. thanks ruby!
@@ -494,12 +565,8 @@ function Card:is_suit(suit, bypass_debuff, flush_calc)
 		-- this specifically makes it do the thing for spectrums
 		if suit == "not a suit" then return true end
 	end
-	if self.zero_secret_bright and suit == "zero_Brights" then 
-		for k, v in pairs(G.jokers.cards) do
-			if v.config.center.key == "j_zero_found_a_star" and v.ability.extra.placed and v.ability.extra.placed == self.zero_secret_bright then
-				return true
-			end
-		end
+	if suit == "zero_Brights" and zero_is_secret_bright(self) then
+		return true
 	end
 	return alias__Card_is_suit(self, suit, bypass_debuff, flush_calc)
 end
@@ -519,6 +586,10 @@ end
 local alias__Game_start_run = Game.start_run
 function Game:start_run(args)
 	local PREGAME = args and args.savetext and args.savetext.GAME or {}
+	if G["Keytomyhe4rt_zone"] then
+		G["Keytomyhe4rt_zone"]:remove()
+		G["Keytomyhe4rt_zone"] = nil
+	end
 	if PREGAME.zero_Keytomyhe4rt_zone then
 		G["Keytomyhe4rt_zone"] = CardArea(0, 0, G.CARD_W * 100, G.CARD_H,
 			{ card_limit = 1e300, type = 'play', highlight_limit = 0 })
@@ -699,6 +770,54 @@ function Card:set_debuff(should_debuff)
     end
 end
 
+local zero_blueprint_compat = G.FUNCS.blueprint_compat
+G.FUNCS.blueprint_compat = function(e)
+  local card = e.config.ref_table
+  if card.ability.blueprint_compat == 'incompatible' and G.jokers then
+    local other
+    if card.ability.name == 'Brainstorm' then
+      other = G.jokers.cards[1]
+    else
+      for i, joker in ipairs(G.jokers.cards) do
+        if joker == card then other = G.jokers.cards[i + 1] end
+      end
+    end
+    if other and other ~= card and other.config.center.key == 'j_zero_egeo' then
+      if card.ability.blueprint_compat_check ~= 'zero_proud' then
+        e.config.colour = mix_colours(G.C.RED, G.C.JOKER_GREY, 0.8)
+        card.ability.blueprint_compat_ui = ' ' .. localize('k_zero_proud') .. ' '
+        card.ability.blueprint_compat_check = 'zero_proud'
+      end
+      return
+    end
+  end
+  return zero_blueprint_compat(e)
+end
+
+local zero_localize = localize
+function localize(args, ...)
+  if type(args) == 'table' and args.type == 'text' and type(args.key) == 'string' and args.key:find('^ch_c_zero_') then
+    local parsed = G.localization.misc.v_text_parsed
+    local target = parsed[args.key]
+    if target and #target > 1 then
+      local rows = {}
+      for _, line in ipairs(target) do
+        parsed[args.key] = { line }
+        rows[#rows + 1] = { n = G.UIT.R, config = { align = "cl" }, nodes = zero_localize(args, ...) }
+      end
+      parsed[args.key] = target
+      return { { n = G.UIT.C, config = { align = "cl" }, nodes = rows } }
+    end
+  end
+  return zero_localize(args, ...)
+end
+
+local zero_create_card = SMODS.create_card
+function SMODS.create_card(t)
+  if t and not t.set and t.type then t.set = t.type end
+  return zero_create_card(t)
+end
+
 local SMODS_debuff_card = SMODS.debuff_card
 function SMODS.debuff_card(card, debuff, source)
     if card and ( next(SMODS.find_card("j_zero_lip_balm")) or SMODS.has_enhancement(card,'m_wild') ) then
@@ -728,9 +847,50 @@ function ease_ante(mod)
 	end
 end
 
+local function zero_food_snapshot(ability)
+	local snap = {}
+	for k, v in pairs(ability) do
+		if type(v) == 'number' then
+			snap[k] = v
+		elseif k == 'extra' and type(v) == 'table' then
+			snap.extra = {}
+			for k2, v2 in pairs(v) do
+				if type(v2) == 'number' then snap.extra[k2] = v2 end
+			end
+		end
+	end
+	return snap
+end
+
+local function zero_food_changed(snap, ability)
+	for k, v in pairs(snap) do
+		if k == 'extra' and type(v) == 'table' then
+			if type(ability.extra) == 'table' then
+				for k2, v2 in pairs(v) do
+					if ability.extra[k2] ~= v2 then return true end
+				end
+			end
+		elseif ability[k] ~= v then
+			return true
+		end
+	end
+	return false
+end
+
 local alias__Card_calculate_joker = Card.calculate_joker
 function Card:calculate_joker(context)
+	local anathemas = G.jokers and self.ability.set == 'Joker' and self.config.center.pools and self.config.center.pools.Food
+		and SMODS.find_card('j_zero_hidden_anathema')
+	local snap = anathemas and next(anathemas) and zero_food_snapshot(self.ability)
 	local ret, post = alias__Card_calculate_joker(self, context)
+	if snap then
+		if zero_food_changed(snap, self.ability) then
+			for _, anathema in ipairs(anathemas) do
+				anathema.ability.extra.xmult = anathema.ability.extra.xmult + anathema.ability.extra.xmult_gain
+				SMODS.calculate_effect({ message = localize({ type = 'variable', key = 'a_xmult', vars = { anathema.ability.extra.xmult } }), colour = G.C.MULT }, anathema)
+			end
+		end
+	end
 	if context.joker_main and not context.blueprint and not self.debuff and self.ability.zero_ond then
 		local scored = zero_ond_score(self)
 		if scored then
@@ -740,5 +900,100 @@ function Card:calculate_joker(context)
 			tail.extra = scored
 		end
 	end
+	if context.joker_main and not context.blueprint and not self.debuff and (self.ability.zero_spread or 0) > 0 then
+		local spread = { mult = self.ability.zero_spread }
+		if not ret then return spread, post end
+		local tail = ret
+		while tail.extra do tail = tail.extra end
+		tail.extra = spread
+	end
 	return ret, post
+end
+
+local zero_nested_card_lists = { "copied_jokers", "stored_jokers" }
+
+local function zero_take_nested_cards(card)
+	local imm = card and card.ability and card.ability.immutable
+	if type(imm) ~= "table" then return end
+	local held
+	for _, k in ipairs(zero_nested_card_lists) do
+		if type(imm[k]) == "table" then
+			held = held or {}
+			held[k] = imm[k]
+			imm[k] = {}
+		end
+	end
+	return held
+end
+
+local function zero_hide_nested_card(card)
+	card.T.x, card.T.y = -1000, -1000
+	card.VT.x, card.VT.y = -1000, -1000
+end
+
+local alias__copy_card = copy_card
+function copy_card(other, new_card, card_scale, playing_card, strip_edition)
+	local held = zero_take_nested_cards(other)
+	local ret = alias__copy_card(other, new_card, card_scale, playing_card, strip_edition)
+	if held then
+		for k, list in pairs(held) do
+			other.ability.immutable[k] = list
+			local copies = {}
+			for _, c in ipairs(list) do
+				if type(c) == "table" and c.is and c:is(Card) then
+					local nc = copy_card(c)
+					zero_hide_nested_card(nc)
+					copies[#copies + 1] = nc
+				end
+			end
+			ret.ability.immutable[k] = copies
+		end
+	end
+	return ret
+end
+
+local alias__card_save = Card.save
+function Card:save()
+	local held = zero_take_nested_cards(self)
+	local ret = alias__card_save(self)
+	if held then
+		local ability = {}
+		for k, v in pairs(self.ability) do ability[k] = v end
+		local imm = {}
+		for k, v in pairs(self.ability.immutable) do imm[k] = v end
+		ability.immutable = imm
+		for k, list in pairs(held) do
+			self.ability.immutable[k] = list
+			local saved = {}
+			for _, c in ipairs(list) do
+				if type(c) == "table" and c.is and c:is(Card) then
+					saved[#saved + 1] = c:save()
+				end
+			end
+			imm[k] = { zero_saved_cards = saved }
+		end
+		ret.ability = ability
+	end
+	return ret
+end
+
+local alias__card_load = Card.load
+function Card:load(cardTable, other_card)
+	local ret = alias__card_load(self, cardTable, other_card)
+	local imm = self.ability and self.ability.immutable
+	if type(imm) == "table" then
+		for _, k in ipairs(zero_nested_card_lists) do
+			if type(imm[k]) == "table" and imm[k].zero_saved_cards then
+				local cards = {}
+				for _, saved in ipairs(imm[k].zero_saved_cards) do
+					local c = Card(0, 0, G.CARD_W, G.CARD_H, G.P_CENTERS.j_joker, G.P_CENTERS.c_base)
+					c:load(saved)
+					zero_hide_nested_card(c)
+					cards[#cards + 1] = c
+				end
+				imm[k] = cards
+			end
+		end
+	end
+	return ret
 end

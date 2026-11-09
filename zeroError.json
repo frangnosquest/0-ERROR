@@ -2,12 +2,15 @@
   "id": "zeroError",
   "name": "0 ERROR",
   "author": ["missingnumber", "notmario"],
-  "description": "[todo]",
+  "description": "A big content mod adding over 140 Jokers, an exotic suit, new consumable types, challenges with actual rewards, a new side mode and a lot more.",
   "prefix": "zero",
   "main_file": "main.lua",
 
-  "version": "0.0.0",
+  "version": "1.0.0",
   "badge_colour": "4F6367",
 
-  "allow_redistribution": true
+  "allow_redistribution": true,
+  "dependencies": [
+    "Steamodded (>=26.927.0~dev-a)"
+  ]
 }

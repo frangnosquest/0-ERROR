@@ -130,18 +130,6 @@ end
 [[patches]]
 [patches.pattern]
 target = "blind.lua"
-pattern = "self.boss = blind and not not blind.boss"
-position = "after"
-match_indent = true
-payload = """
-if G.GAME.round_resets.blind_states and G.GAME.round_resets.blind_states.Extra_Boss == 'Current' then
-    self.boss = false
-end
-"""
-
-[[patches]]
-[patches.pattern]
-target = "blind.lua"
 pattern = "elseif self.name and self.name ~= '' then"
 position = "before"
 match_indent = true

@@ -1073,11 +1073,17 @@ local loc_stuff = {
 			"{f:zero_pokemon}PKMN{f:zero_pixeldingbats}IYRMZ{f:zero_pokemon}のほ{f:zero_pixeldingbats}IE",
         },
       },
+	  j_zero_evil_notmario = {
+        name = "EVIL notmario??????????",
+        text = {
+			"Scored cards give {C:white,X:chips}X#1#{} Chips",
+			"if hand is a {C:attention}Four of a Kind{}"
+        },
+      },
 	  j_zero_portrait_dragee = {
         name = "Dragee's Portrait",
         text = {
-			"Draw a {C:attention}Sunsteel Card{} and",
-			"immediately {C:attention}score{} it when",
+			"Draw a {C:attention}Sunsteel Card{} when",
 			"a {C:attention}Sunsteel Card{} or a card",
 			"with {C:hearts}Heart{} suit scores"
         },
@@ -1523,6 +1529,34 @@ local loc_stuff = {
             "{C:attention}first hand{} of round"
         },
       },
+	  j_zero_ninezero = {
+        name = "Ninezero",
+        text = {
+			"Scored {C:attention}9s{} permanently",
+			"gain {C:chips}+#1#{} Chips"
+        },
+      },
+	  j_zero_marvin = {
+        name = "Marvin",
+        text = {
+			"Earn {C:money}$#1#{} for each",
+			"discarded {C:attention}9"
+        },
+      },
+	  j_zero_aurielle = {
+        name = "Aurielle",
+        text = {
+			"First scored card each",
+			"hand becomes a {C:attention}Gold{} card"
+        },
+      },
+	  j_zero_sylva = {
+        name = "Sylva",
+        text = {
+			"{C:attention}Gold{} cards held in hand",
+			"give {X:mult,C:white}X#1#{} Mult"
+        },
+      },
 	  j_zero_dandelion = {
         name = "Dandelion",
         text = {
@@ -1556,6 +1590,48 @@ local loc_stuff = {
 			"{C:attention}Face{} cards give {C:white,X:mult}X#1#{} Mult",
             "if played hand contains",
 			"a {C:attention}Spectrum"
+        },
+      },
+	  j_zero_vegemite = {
+        name = "Vegemite",
+        text = {
+			"{C:mult}+#1#{} Mult",
+			"At end of round, loses {C:mult}#2#{} Mult and",
+			"spreads it across your other {C:attention}Jokers{}",
+        },
+      },
+	  j_zero_hidden_anathema = {
+        name = "Hidden Anathema",
+        text = {
+			"Gains {X:mult,C:white}X#1#{} Mult every time any",
+			"value on a {C:attention}Food Joker{} changes",
+			"{C:inactive}(Currently {X:mult,C:white}X#2#{C:inactive} Mult)"
+        },
+      },
+	  j_zero_orange_flummery = {
+        name = "Orange Flummery",
+        text = {
+			"{C:attention}+#1#{} card selection limit,",
+			"reduces by {C:red}#2#{} every round"
+        },
+      },
+	  j_zero_verity = {
+        name = "Verity",
+        text = {
+			"Played {C:attention}face{} cards",
+			"give {C:mult}+#1#{} Mult",
+			"when scored"
+        },
+      },
+	  j_zero_through_jokers_spades = {
+        name = "Through the Jokers and Spades",
+        text = {
+			"Scored cards in the {C:attention}correct",
+			"{C:attention}position{} give {C:chips}+#1#{} Chips,",
+			"hands with all cards in the {C:attention}correct",
+			"{C:attention}position{} increase your {C:white,X:chips}Streak{},",
+			"any other hand resets your {C:white,X:chips}Streak",
+			"{C:inactive}(Currently {C:white,X:chips}#3#x{C:inactive}, max {C:white,X:chips}#4#x{C:inactive})"
         },
       },
 	  j_zero_vonllery = {
@@ -1641,7 +1717,7 @@ local loc_stuff = {
         text = {
 			"Played {V:1}#3#{} have a {C:green}#1# in #2#{}",
 			"chance to create a random",
-			"{C:dark_edition}Negative{} {C:attention}Food{} Joker when scored",
+			"{C:dark_edition}Negative{} {C:attention}Food Joker{} when scored",
         },
 		unlock = {
             "Beat the",
@@ -1660,6 +1736,83 @@ local loc_stuff = {
 		unlock = {
             "Beat the",
             "{C:attention}Glittering and Golden",
+            "challenge"
+        }
+      },
+	  j_zero_ivan = {
+        name = {"Ivan, the Jaded",
+				"{s:0.5}Onlooker of Envy"},
+        text = {
+			"At end of round, writes the ability",
+			"of a random owned {C:attention}Joker",
+			"on its {C:attention}scroll{} {C:inactive}(no duplicates){},",
+			"copies every {C:attention}Joker{} on their",
+			"scroll from {C:attention}left {}to{C:attention} right",
+			"{C:inactive}(#2#/#1# lines written)"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Don't Forget Me",
+            "challenge"
+        }
+      },
+	  j_zero_reffa = {
+        name = {"Reffa, the Dreaming",
+				"{s:0.5}Mistress of Sloth"},
+        text = {
+			"Gains {X:mult,C:white}X#1#{} Mult for every unused",
+			"{C:blue}hand{} and {C:red}discard{} at end of round,",
+			"skipping a {C:attention}Blind{} {C:attention}doubles{} this gain",
+			"{C:inactive}(currently {X:mult,C:white}X#2#{C:inactive} Mult)"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Lotus Eater",
+            "challenge"
+        }
+      },
+	  j_zero_egeo = {
+        name = {"E'Geo, the Superlative",
+				"{s:0.5}Emperor of Pride"},
+        text = {
+			"Other {C:attention}Jokers{} orbit around this,",
+			"gains {X:mult,C:white}X#1#{} Mult when a hand sets",
+			"a new {C:attention}best hand{} score for the run",
+			"{C:inactive}(currently {X:mult,C:white}X#2#{C:inactive} Mult, best hand score: {C:attention}#3#{C:inactive})"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}The World Revolving",
+            "challenge"
+        }
+      },
+	  j_zero_orched = {
+        name = {"Orched, the Incubine",
+				"{s:0.5}Domineer of Lust"},
+        text = {
+			"Scored {V:1}#2#{} convert a random",
+			"card held in hand to {V:1}#2#{},",
+			"{V:1}#2#{} held in hand",
+			"give {X:mult,C:white}X#1#{} Mult"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Love Me Forever",
+            "challenge"
+        }
+      },
+	  j_zero_kana = {
+        name = {"Kana, the Nihil",
+				"{s:0.5}Apostle of Despair"},
+        text = {
+			"Hollowly echoes the sin of",
+			"another {C:patron}Patron{} each round,",
+			"bestowing it upon {V:1}#1#{}",
+			"{C:inactive}(Currently {C:attention}#2#{C:inactive})"
+        },
+		unlock = {
+            "Beat the",
+            "{C:attention}Fifty Thousand Shades of Grey",
             "challenge"
         }
       },
@@ -1721,6 +1874,32 @@ local loc_stuff = {
             "Score {C:dark_edition}Naneinf",
         }
       },
+	  j_zero_channeler = {
+        name = {"Virtue Channeler",
+				"{s:0.5}Ca Uninto Te Xin Ton"},
+        text = {
+			"Unleashes the {C:patron}Patron",
+			"Joker of the first {C:patron}sin{}",
+			"you commit"
+        },
+		unlock = {
+            "Beat every",
+            "{C:patron}sinful{} challenge"
+        }
+      },
+	  j_zero_channeler_vice = {
+        name = {"Vice Channeler",
+				"{s:0.5}Ca Uninto Te Xin Ton"},
+        text = {
+			"Unleashes the {C:patron}Patron",
+			"Joker of the first {C:patron}sin{}",
+			"you commit"
+        },
+		unlock = {
+            "Beat every",
+            "{C:patron}sinful{} challenge"
+        }
+      },
 	  j_zero_darkasso = {
         name = "Darkasso",
         text = {
@@ -1733,6 +1912,26 @@ local loc_stuff = {
             "Find an old {C:attention}password",
 			"lost to time"
         }
+      },
+	  j_zero_no_default_voice = {
+        name = "No Default Voice",
+        text = {
+			"Creates a random {C:dark_edition}Negative",
+			"{C:attention}Vocal Synth Joker{} after",
+			"beating a {C:attention}Boss Blind"
+        },
+		unlock = {
+            "Trigger {C:attention}Vocal Synth",
+			"Jokers {C:attention}100{} times"
+        }
+      },
+	  j_zero_emotional_support = {
+        name = "Emotional Support",
+        text = {
+			"Each time your {C:attention}Partner{}",
+			"triggers, reduce the current",
+			"{C:attention}Blind{} by {C:green}#1#%{}"
+        },
       },
     },
     Prestige = {
@@ -1969,7 +2168,9 @@ local loc_stuff = {
         text = {
           "Improves {C:attention}#1#{} card#2#",
           "{C:inactive}(determined by already",
-		  "{C:inactive}applied {C:attention}modifiers{C:inactive})"
+		  "{C:inactive}applied {C:attention}modifiers{C:inactive})",
+		  "Favors {C:attention}Sunsteel{}, {C:dark_edition}Polychrome{}",
+		  "and {C:attention}modifiers{} already in deck"
         },
       },
 	  c_zero_cups_ten = {
@@ -2467,6 +2668,12 @@ local loc_stuff = {
 			"{C:money}+$#1#",
 		},
 	  },
+	  zero_spread = {
+		name = "Vegemite Spread",
+		text = {
+			"{C:mult}+#1#{} Mult",
+		},
+	  },
 	  zero_ond_mult = {
 		name = "{f:zero_symbols}Ω{}ND Mutation",
 		text = {
@@ -2609,14 +2816,65 @@ local loc_stuff = {
 			"and {C:attention}LOLA{} are together"
 		},
 	  },
+	  zero_kana_wrath = {
+		name = "Hollow Wrath",
+		text = { "Scored {V:1}Brights{} give", "{X:mult,C:white}X#1#{} Mult" },
+	  },
+	  zero_kana_greed = {
+		name = "Hollow Greed",
+		text = { "Scored {V:1}Brights{} earn {C:money}$#2#{}" },
+	  },
+	  zero_kana_gluttony = {
+		name = "Hollow Gluttony",
+		text = { "Scored {V:1}Brights{} have a {C:green}#3# in #4#{}", "chance to create a random", "{C:dark_edition}Negative{} {C:attention}Food Joker{}" },
+	  },
+	  zero_kana_lust = {
+		name = "Hollow Lust",
+		text = { "Scored {V:1}Brights{} convert a random", "card held in hand to {V:1}Brights{}" },
+	  },
+	  zero_kana_envy = {
+		name = "Hollow Envy",
+		text = { "Retrigger scored {V:1}Brights{}" },
+	  },
+	  zero_kana_sloth = {
+		name = "Hollow Sloth",
+		text = { "{V:1}Brights{} held in hand", "give {X:mult,C:white}X#1#{} Mult" },
+	  },
+	  zero_kana_pride = {
+		name = "Hollow Pride",
+		text = { "Scored {V:1}Brights{} permanently", "gain {C:chips}+#5#{} Chips" },
+	  },
+	  zero_desired = {
+		name = "Desired",
+		text = {
+			"Only {C:attention}Desired{} cards",
+			"can be played",
+		},
+	  },
 	  zero_russian_roulette = {
 		name = "Russian Roulette",
 		text = {
 			"{C:green}#1# in #2#{} chance to",
-			"{C:red}end the run{} when scored",
+			"{E:2,C:red}end the run{} when scored",
 		},
 	  },
-	  zero_yixi_mai = {
+	  zero_ninezero_marvin = {
+			name = "Synergy!",
+			text = {
+				"Discarded {C:attention}9s{} also gain",
+				"{C:attention}Ninezero's{} Chips when",
+				"{C:attention}Ninezero{} and {C:attention}Marvin{} are together"
+			},
+		  },
+		  zero_aurielle_sylva = {
+			name = "Synergy!",
+			text = {
+				"{C:attention}Sylva{} gives {X:mult,C:white}X#1#{} Mult instead and",
+				"held {C:attention}Gold{} cards earn {C:money}$#2#{} at end",
+				"of round when {C:attention}Aurielle{} is also owned"
+			},
+		  },
+		  zero_yixi_mai = {
 		name = "Synergy!",
 		text = {
 			"{C:attention}Yi Xi{} does not reset if",
@@ -2629,6 +2887,26 @@ local loc_stuff = {
     dictionary = {
       b_zero_absorbed = "DESTROYED",
       k_zero_absorbed_empty = "Nothing destroyed yet",
+      b_zero_scroll = "SCROLL",
+      b_zero_erase = "Erase",
+      k_zero_written_ex = "Written!",
+      k_zero_scroll_title = "Ivan's Scroll",
+      k_zero_scroll_blank = "blank",
+      k_zero_forgotten = "Forgotten...",
+      k_zero_proud = "unmatchable",
+      k_zero_conlasse_payout = "Conlasse",
+      k_zero_seduced_ex = "Seduced!",
+      k_zero_unleashed_ex = "Unleashed!",
+      k_zero_sin_wrath = "Wrath",
+      k_zero_sin_greed = "Greed",
+      k_zero_sin_gluttony = "Gluttony",
+      k_zero_sin_lust = "Lust",
+      k_zero_sin_envy = "Envy",
+      k_zero_sin_sloth = "Sloth",
+      k_zero_sin_pride = "Pride",
+      k_zero_sin_despair = "Despair",
+      k_zero_undesired_hand = "Every played card must be Desired",
+      k_zero_miss_ex = "Miss!",
       b_prestige = "Prestige",
       k_prestige_pack = "Prestige Pack",
 	  b_cups = "Cups",
@@ -2712,9 +2990,15 @@ local loc_stuff = {
 	  zero_sc_hint_jericho = "Seek the fabled\nflora 6",
 	  zero_sc_hint_oulala = "Infinity is\nsuch a fragile\nthing",
 	  zero_sc_hint_ = "The password\nis found where\nAncient Magic\nmeets its end",
+	  zero_sc_hint_channeler = "Unleash powerful\ndesires upon\nthis world",
+	  zero_sc_hint_no_default_voice = "Take a moment\nto heed\ntheir songs",
     },
 	v_dictionary = {
 	  zero_absorbed_title = "Destroyed Jokers (#1#)",
+	  zero_score_to_beat = "Score to beat: #1#",
+	  zero_desire_of_the_round = "#1# are desired",
+	  zero_ttjs_streak = "#1#x Streak!",
+	  zero_a_selection_minus = "-#1# Selection",
 	  zero_alpine_lily_mult = "+#1# Mult",
 	  zero_alpine_lily_chips = "+#1# Chips",
 	  zero_alpine_lily_xmult = "X#1# Mult",
@@ -2733,9 +3017,13 @@ local loc_stuff = {
 	  ch_c_zero_no_interest_cap = {"No cap on {C:money}interest"},
 	  ch_c_zero_inflation = {"{C:money}Rampant Inflation{}"},
 	  ch_c_zero_only_food ={"Only {C:attention}Food{} Jokers appear"},
-	  ch_c_zero_no_cups = {"{C:cups}Cups{} cards do not appear in the shop"},
-	  ch_c_zero_no_elemental = {"{C:elemental}Elemental{} cards do not appear in the shop"},
-	  ch_c_zero_russian_roulette = {"After scoring, every {C:attention}played{} card gains {C:red}Russian Roulette"},
+	  ch_c_zero_50000_shades_of_grey = {"Each Ante, the rule of a random sinful", "{C:patron}Patron{} challenge is in effect"},
+	  ch_c_zero_50000_shades_of_grey_double = {"From Ante {C:attention}5{}, two sins are in effect at once"},
+	  ch_c_zero_love_me_forever = {"Each round, cards of a random suit become {C:attention}Desired{},", "hands with any card that is not {C:attention}Desired{} do not score"},
+	  ch_c_zero_world_revolving = {"Hands only score if they beat", "your {C:attention}best hand{} score of the run"},
+	  ch_c_zero_drowsy = {"Hands played after the first each round", "{E:2,C:red}permanently{} increase {C:attention}all Blind{} sizes by {C:red}5%"},
+	  ch_c_zero_forgotten = {"At the start of {C:attention}shop{}, {C:attention}Jokers{} that did", "not trigger are {C:red}forgotten"},
+	  ch_c_zero_russian_roulette = {"After scoring, every {C:attention}played{} card", "gains {C:red}Russian Roulette"}
 	},
 	suits_singular = {
 	  zero_Brights = "Bright",
@@ -2752,10 +3040,16 @@ local loc_stuff = {
 		c_zero_most_dangerous_game = "The Most Dangerous Game",
 		c_zero_forever_feast = "Forever Feast",
 		c_zero_glittering_golden = "Glittering and Golden",
+		c_zero_dont_forget_me = "Don't Forget Me",
+		c_zero_lotus_eater = "Lotus Eater",
+		c_zero_world_revolving = "The World Revolving",
+		c_zero_love_me_forever = "Love Me Forever",
+		c_zero_50000_shades_of_grey = "Fifty Thousand Shades of Grey",
 	},
 	labels = {
 		zero_gala = "Gala",
 		zero_russian_roulette = "Russian Roulette",
+		zero_desired = "Desired",
 		zero_occult = "Occult",
     zero_redjewel = 'Red Gem',
     zero_orangejewel = 'Orange Gem',

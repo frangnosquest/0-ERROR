@@ -42,7 +42,7 @@ function get_X_same_jewel(num, hand, or_more)
 
         ::continue::
     end
-    print(vals)
+    --print(vals)
     local ret = {}
     for i = #vals, 1, -1 do
         if next(vals[i]) then

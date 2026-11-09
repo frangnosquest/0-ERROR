@@ -21,13 +21,16 @@ assert(SMODS.load_file("./modules/suits.lua"))()
 assert(SMODS.load_file("./modules/tarot.lua"))()
 assert(SMODS.load_file("./modules/planet.lua"))()
 assert(SMODS.load_file("./modules/spectral.lua"))()
+assert(SMODS.load_file("./modules/code_fu.lua"))()
 assert(SMODS.load_file("./modules/vouchers.lua"))()
 assert(SMODS.load_file("./modules/decks.lua"))()
 assert(SMODS.load_file("./modules/secret.lua"))()
+assert(SMODS.load_file("./modules/jumpscare.lua"))()
 
 if next(SMODS.find_mod('cardpronouns')) then
 	assert(SMODS.load_file("./modules/crossmod/pronouns.lua"))()
 end
+
 if next(SMODS.find_mod('Cryptid')) then
 	assert(SMODS.load_file("./modules/crossmod/cryptid/vouchers.lua"))()
 	assert(SMODS.load_file("./modules/crossmod/cryptid/bg_music.lua"))()

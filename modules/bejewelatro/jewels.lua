@@ -253,7 +253,13 @@ function Bejewelatro.f.jewel_drag(card1, card2)
         trigger = 'after',
         blockable = false,
         delay =  0.1*G.SETTINGS.GAMESPEED,
-        func = (function() 
+        func = (function()
+            if G.STATE ~= G.STATES.SELECTING_HAND then
+                Bejewelatro.f.jewel_swap(card2, card1)
+                card1.states.drag.can = true
+                card2.states.drag.can = true
+                return true
+            end
             local y1, colours1 = Bejewelatro.f.check_line(function(x)
                 return Bejewelatro.jewel_rows[card1.position.y].cards[x] end)
             local y2, colours2 = Bejewelatro.f.check_line(function(x)
@@ -439,6 +445,10 @@ local drag_ref = Moveable.drag
 function Moveable:drag(offset)
     if self and self.ability and self.ability.set == 'jewel' then
         if self.getting_destroyed then return end
+        if G.STATE ~= G.STATES.SELECTING_HAND then
+            G.CONTROLLER:L_cursor_release()
+            return
+        end
         if not self.position or not Bejewelatro.jewel_rows[self.position.y] then
             return
         end

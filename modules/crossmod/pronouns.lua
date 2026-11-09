@@ -67,3 +67,23 @@ CardPronouns.Pronoun {
 	end,
 	key = "he_any"
 }
+
+CardPronouns.Pronoun {
+	colour = HEX("8F5FBF"),
+	text_colour = G.C.WHITE,
+	pronoun_table = { "It", "They" },
+	in_pool = function()
+		return false
+	end,
+	key = "it_they"
+}
+
+CardPronouns.Pronoun {
+	colour = HEX("8579FC"),
+	text_colour = G.C.WHITE,
+	pronoun_table = { "They", "He" },
+	in_pool = function()
+		return false
+	end,
+	key = "they_he"
+}

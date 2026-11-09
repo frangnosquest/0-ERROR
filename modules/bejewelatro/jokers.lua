@@ -822,17 +822,23 @@ local brights_locked_jokers = {
 }
 
 for k,v in pairs(banned_jokers) do
+    local original_in_pool = G.P_CENTERS[v] and G.P_CENTERS[v].in_pool
     SMODS.Joker:take_ownership(v, {
         in_pool = function(self, args)
-            return not do_bejewelatro()
+            if do_bejewelatro() then return false end
+            if original_in_pool then return original_in_pool(self, args) end
+            return true
         end,
     }, true)
 end
 
 for k,v in pairs(brights_locked_jokers) do
+    local original_in_pool = G.P_CENTERS[v] and G.P_CENTERS[v].in_pool
     SMODS.Joker:take_ownership(v, {
         in_pool = function(self, args)
-            return (not do_bejewelatro() or zero_brights_in_deck()) and not do_bejewelatro(true)
+            if (do_bejewelatro() and not zero_brights_in_deck()) or do_bejewelatro(true) then return false end
+            if original_in_pool then return original_in_pool(self, args) end
+            return true
         end,
     }, true)
 end

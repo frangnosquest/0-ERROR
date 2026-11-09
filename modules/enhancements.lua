@@ -27,7 +27,6 @@ SMODS.Enhancement {
   calculate = function(self, card, context)
     if context.main_scoring and context.cardarea == G.hand then
 	  local val = card.ability.extra.xmult + (G.GAME.zero_sunsteel_pow or 0)
-	  val = val + (card.ability.extra.xmult_mod + (G.GAME.zero_sunsteel_pow or 0)) * (G.zero_dragee_count or 0)
 	  for k,v in ipairs(G.hand.cards) do
 	    if v ~= card and SMODS.has_enhancement(v, "m_zero_sunsteel") then
 		  val = val + card.ability.extra.xmult_mod + (G.GAME.zero_sunsteel_pow or 0)
@@ -161,7 +160,6 @@ SMODS.Enhancement {
 			_card:start_materialize()
 			_card.keytomyhe4rt_storage = true
 			table.insert(G.playing_cards, _card)
-            G.deck.config.card_limit = G.deck.config.card_limit + 1
 			v:start_dissolve()
 		end
 	end

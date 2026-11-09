@@ -192,7 +192,6 @@ SMODS.Shader{
 	key = "matrix",
 	path = "matrix.fs"
 }
-
 SMODS.ScreenShader({
 	key = 'greyscale',
 	path = 'greyscale.fs',

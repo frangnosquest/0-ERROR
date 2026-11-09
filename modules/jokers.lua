@@ -38,6 +38,16 @@ SMODS.ObjectType {
 	},
 }
 
+SMODS.ObjectType {
+	key = "zero_VocalSynth",
+	default = "j_zero_miriam",
+	cards = {},
+}
+
+function zero_is_vocal_synth(center)
+	return center and ((center.pools and center.pools.zero_VocalSynth) or SMODS.ObjectTypes.zero_VocalSynth.cards[center.key]) and true or false
+end
+
 function zero_is_glitch(center)
 	return center and ((center.pools and center.pools.zero_Glitch) or SMODS.ObjectTypes.zero_Glitch.cards[center.key]) and true or false
 end
@@ -308,55 +318,6 @@ SMODS.Joker {
   end,
 }
 
-local srh = save_run
-save_run = function(self)
-  local perma_monster_jokers = {}
-  for i, card in ipairs(G.jokers.cards) do
-    if card.config.center.key == "j_zero_perma_monster" then
-      -- print("saving wow", i)
-      perma_monster_jokers[i] = {}
-
-      for _, copied_card in ipairs(card.ability.immutable.copied_jokers) do
-        -- print(copied_card.config.center.key)
-        perma_monster_jokers[i][#perma_monster_jokers[i] + 1] = copied_card:save()
-      end
-    end
-  end
-
-  G.GAME.zero_perma_monster_jokers = perma_monster_jokers
-
-  srh(self)
-end
-local strh = Game.start_run
-Game.start_run = function(self, args)
-  strh(self, args)
-
-  if G.GAME.zero_perma_monster_jokers then
-    -- print("reinit")
-    for i, cards in pairs(G.GAME.zero_perma_monster_jokers) do
-      -- print(i)
-      local host = G.jokers and G.jokers.cards[i]
-      if host and host.ability and host.ability.immutable and host.config.center.key == "j_zero_perma_monster" then
-      host.ability.immutable.copied_jokers = {}
-      for _, copied_card in pairs(cards) do
-        local card = Card(0, 0, 1, 1, G.P_CENTERS.j_joker, G.P_CENTERS.c_base)
-        card.T.x = -1000
-        card.T.y = -1000
-        card.T.H = 4 -- WTF ??
-        card.T.h = 4
-        card.T.w = 4
-        card:load(copied_card)
-        host.ability.immutable.copied_jokers[#host.ability.immutable.copied_jokers + 1] = card
-
-        -- print(card.config.center.key)
-      end
-      end
-    end
-
-    G.GAME.zero_perma_monster_jokers = nil
-  end
-end
-
 -- overlay listing the jokers a copy of Perma-Monster has absorbed
 local PM_PER_ROW = 5
 
@@ -392,6 +353,7 @@ G.FUNCS.zero_perma_monster_view = function(e)
     end
   end
 
+  G.SETTINGS.paused = true
   G.FUNCS.overlay_menu({
     definition = create_UIBox_generic_options({ contents = {
       { n = G.UIT.R, config = { align = "cm", padding = 0.1 }, nodes = {
@@ -411,6 +373,13 @@ G.FUNCS.exit_overlay_menu = function(...)
     G.zero_pm_areas = nil
   end
   return pm_exit_overlay(...)
+end
+
+local function zero_perma_monster_can_consume(target, card)
+  return target and target ~= card and not target.getting_sliced
+    and target.config.center.key ~= "j_zero_perma_monster"
+    and target.config.center.blueprint_compat
+    and not SMODS.is_eternal(target, card)
 end
 
 SMODS.Joker {
@@ -439,9 +408,29 @@ SMODS.Joker {
   -- keep_on_use = true,
   can_use = function(self, card)
     return G.STATE == G.STATES.SELECTING_HAND and card.ability.extra.active
+      and zero_perma_monster_can_consume(G.jokers.cards[1], card)
   end,
   loc_vars = function(self, info_queue, center)
-    return { vars = { #center.ability.immutable.copied_jokers } }
+    local main_end
+    if center.area and center.area == G.jokers then
+      local compatible = zero_perma_monster_can_consume(G.jokers.cards[1], center)
+      main_end = {
+        {
+          n = G.UIT.C,
+          config = { align = "bm", minh = 0.4 },
+          nodes = {
+            {
+              n = G.UIT.C,
+              config = { ref_table = center, align = "m", colour = compatible and mix_colours(G.C.GREEN, G.C.JOKER_GREY, 0.8) or mix_colours(G.C.RED, G.C.JOKER_GREY, 0.8), r = 0.05, padding = 0.06 },
+              nodes = {
+                { n = G.UIT.T, config = { text = ' ' .. localize('k_' .. (compatible and 'compatible' or 'incompatible')) .. ' ', colour = G.C.UI.TEXT_LIGHT, scale = 0.32 * 0.8 } },
+              }
+            }
+          }
+        }
+      }
+    end
+    return { vars = { #center.ability.immutable.copied_jokers }, main_end = main_end }
   end,
   calculate = function(self, card, context)
     local returns = {}
@@ -475,9 +464,7 @@ SMODS.Joker {
   use = function(self, card, area, copier)
     local my_pos = 0
     -- print("asdf", my_pos)
-    if G.jokers.cards[my_pos+1] and not card.getting_sliced and
-      not SMODS.is_eternal(G.jokers.cards[my_pos+1], card) and not G.jokers.cards[my_pos+1].getting_sliced and
-      not (G.jokers.cards[my_pos+1].config.center.key == "j_zero_perma_monster") then
+    if not card.getting_sliced and zero_perma_monster_can_consume(G.jokers.cards[my_pos+1], card) then
 
       local sliced_card = G.jokers.cards[my_pos+1]
       -- print(sliced_card)
@@ -1686,24 +1673,45 @@ SMODS.Joker {
     loc_vars = function(self, info_queue, card)
 		return { vars = { G.GAME.probabilities.normal, card.ability.extra.odds, card.ability.extra.money } }
     end,
-    calculate = function(self, card, context)
-		if context.hand_drawn then
-		local count = 0
-			for _, v in pairs(G.hand.cards) do
+    update = function(self, card, dt)
+		if card.area ~= G.jokers or card.debuff or not G.hand or G.STATE ~= G.STATES.SELECTING_HAND then return end
+		local sevens = {}
+		for _, v in ipairs(G.hand.cards) do
+			if v.base.value == "7" and not SMODS.has_no_rank(v) then
+				sevens[#sevens + 1] = v
+			end
+		end
+		local diff = #sevens - card.ability.extra.limit
+		if diff ~= 0 then
+			SMODS.change_play_limit(diff)
+			SMODS.change_discard_limit(diff)
+			card.ability.extra.limit = #sevens
+		end
+		for _, v in ipairs(sevens) do
+			v.ability.forced_selection = true
+			if not v.highlighted then
+				G.hand:add_to_highlighted(v, true)
+			end
+		end
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+		if card.ability.extra.limit ~= 0 then
+			SMODS.change_play_limit(-card.ability.extra.limit)
+			SMODS.change_discard_limit(-card.ability.extra.limit)
+			card.ability.extra.limit = 0
+		end
+		if G.hand then
+			for _, v in ipairs(G.hand.cards) do
 				if v.base.value == "7" then
-					count = count + 1
-					if not context.blueprint then
-						v.ability.forced_selection = true
-						G.hand:add_to_highlighted(v)
+					v.ability.forced_selection = nil
+					if v.highlighted then
+						G.hand:remove_from_highlighted(v, true)
 					end
 				end
 			end
-			if count ~= card.ability.extra.limit then
-				SMODS.change_play_limit(-card.ability.extra.limit + count)
-				SMODS.change_discard_limit(-card.ability.extra.limit + count)
-				card.ability.extra.limit = count
-			end
 		end
+    end,
+    calculate = function(self, card, context)
 		if context.individual and context.cardarea == G.play and context.other_card.base.value == "7" and pseudorandom('he_has_a_gun') < G.GAME.probabilities.normal / card.ability.extra.odds then
 			return {
 				dollars = card.ability.extra.money
@@ -1862,6 +1870,23 @@ SMODS.Joker {
 	pronouns = "she_her"
 }
 
+local function zero_key_return_stored()
+    local zone = G["Keytomyhe4rt_zone"]
+    if not zone then return end
+    local stored_cards = {}
+    for i, stored in ipairs(zone.cards) do
+        stored_cards[i] = stored
+    end
+    for _, stored in ipairs(stored_cards) do
+        G.playing_card = (G.playing_card or 0) + 1
+        local restored = copy_card(stored, nil, nil, G.playing_card)
+        restored:add_to_deck()
+        G.deck:emplace(restored)
+        table.insert(G.playing_cards, restored)
+        stored:start_dissolve()
+    end
+end
+
 SMODS.Joker {
     key = "key_he4rt",
     atlas = "zero_jokers",
@@ -1890,7 +1915,8 @@ SMODS.Joker {
         k3y_card:set_ability(G.P_CENTERS.m_zero_k3y)
         G.play:emplace(k3y_card)
         table.insert(G.playing_cards, k3y_card)
-        for _, v in pairs(G.play.cards) do
+        G.deck.config.card_limit = G.deck.config.card_limit + 2
+        for _, v in ipairs({ l0ck_card, k3y_card }) do
             G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.5, func = function()
                 draw_card(G.play, G.deck, nil, nil, nil, v)
                 G.deck:shuffle()
@@ -1906,6 +1932,7 @@ SMODS.Joker {
                 return
             end
         end
+        zero_key_return_stored()
         for _, v in pairs(G.playing_cards) do
             if v.config.center and (v.config.center == G.P_CENTERS.m_zero_l0ck or v.config.center == G.P_CENTERS.m_zero_k3y) then
                 v:start_dissolve("override")
@@ -1928,12 +1955,14 @@ SMODS.Joker {
                 l0ck_card:set_ability(G.P_CENTERS.m_zero_l0ck)
                 G.deck:emplace(l0ck_card)
                 table.insert(G.playing_cards, l0ck_card)
+                G.deck.config.card_limit = G.deck.config.card_limit + 1
             end
             if found_k3y == false then
                 local k3y_card = create_card("Base", G.deck, nil, nil, nil, nil, nil, "zero_k3y")
                 k3y_card:set_ability(G.P_CENTERS.m_zero_k3y)
                 G.deck:emplace(k3y_card)
                 table.insert(G.playing_cards, k3y_card)
+                G.deck.config.card_limit = G.deck.config.card_limit + 1
             end
         end
     end
@@ -3556,48 +3585,6 @@ SMODS.Joker {
     end,
 }
 
-local srh = save_run
-save_run = function(self)
-  local q_triangle_jokers = {}
-  for i, card in ipairs(G.jokers.cards) do
-    if card.config.center.key == "j_zero_q_triangle" then
-      q_triangle_jokers[i] = {}
-      for _, stored_card in ipairs(card.ability.immutable.stored_jokers) do
-        q_triangle_jokers[i][#q_triangle_jokers[i] + 1] = stored_card:save()
-      end
-    end
-  end
-
-  G.GAME.zero_q_triangle_jokers = q_triangle_jokers
-
-  srh(self)
-end
-
-local strh = Game.start_run
-Game.start_run = function(self, args)
-  strh(self, args)
-
-  if G.GAME.zero_q_triangle_jokers then
-    for i, cards in pairs(G.GAME.zero_q_triangle_jokers) do
-      local host = G.jokers and G.jokers.cards[i]
-      if host and host.ability and host.ability.immutable and host.config.center.key == "j_zero_q_triangle" then
-      host.ability.immutable.stored_jokers = {}
-      for _, stored_card in pairs(cards) do
-        local card = Card(0, 0, 1, 1, G.P_CENTERS.j_joker, G.P_CENTERS.c_base)
-        card.T.x = -1000
-        card.T.y = -1000
-        card.T.H = 4
-        card.T.h = 4
-        card.T.w = 4
-        card:load(stored_card)
-        host.ability.immutable.stored_jokers[#host.ability.immutable.stored_jokers + 1] = card
-      end
-      end
-    end
-    G.GAME.zero_q_triangle_jokers = nil
-  end
-end
-
 SMODS.Joker {
     key = "q_triangle",
 	atlas = "zero_jokers",
@@ -3791,7 +3778,8 @@ SMODS.Joker {
 	end,
 	calculate = function(self, card, context)
 		G.dragee_sunsteels = G.dragee_sunsteels or {}
-		if context.before and #G.dragee_sunsteels == 0 and not context.blueprint then
+		if context.before and not context.blueprint then
+			G.dragee_sunsteels = {}
 			for k, v in pairs(G.deck.cards) do
 				if SMODS.has_enhancement(v, "m_zero_sunsteel") then
 					G.dragee_sunsteels[#G.dragee_sunsteels + 1] = v
@@ -3799,30 +3787,41 @@ SMODS.Joker {
 			end
 		end
 		if context.individual and context.cardarea == G.play and not context.end_of_round and (SMODS.has_enhancement(context.other_card, "m_zero_sunsteel") or context.other_card:is_suit("Hearts")) and #G.dragee_sunsteels > 0 then
-			local randomdraw = pseudorandom_element(G.dragee_sunsteels, "portrait_dragee")
-			for i, v in ipairs(G.dragee_sunsteels) do if v == randomdraw then table.remove(G.dragee_sunsteels, i) break end end
-			return {
-				message = localize('k_draw_ex'),
-				colour = G.ARGS.LOC_COLOURS.diamonds,
-				func = function()
-					draw_card(G.deck, G.hand, nil, "up", nil, randomdraw)
-					local val = randomdraw.ability.extra.xmult + (G.GAME.zero_sunsteel_pow or 0)
-					val = val + (randomdraw.ability.extra.xmult_mod + (G.GAME.zero_sunsteel_pow or 0)) * (G.zero_dragee_count or 0)
-					for k,v in ipairs(G.hand.cards) do
-						if v ~= randomdraw and SMODS.has_enhancement(v, "m_zero_sunsteel") then
-						val = val + randomdraw.ability.extra.xmult_mod + (G.GAME.zero_sunsteel_pow or 0)
-						end
+			local randomdraw, index = pseudorandom_element(G.dragee_sunsteels, "portrait_dragee")
+			table.remove(G.dragee_sunsteels, index)
+			if randomdraw.area == G.deck then
+				local from_x, from_y = randomdraw.VT.x, randomdraw.VT.y
+				G.deck:remove_card(randomdraw)
+				G.hand:emplace(randomdraw)
+				randomdraw.states.visible = false
+				randomdraw.zero_dragee_pending = true
+				G.hand:align_cards()
+				local speaker = context.blueprint_card or card
+				return {
+					func = function()
+						G.E_MANAGER:add_event(Event({
+							trigger = 'before',
+							delay = 0.5,
+							func = function()
+								randomdraw.zero_dragee_pending = nil
+								randomdraw.VT.x, randomdraw.VT.y = from_x, from_y
+								randomdraw.states.visible = true
+								G.hand:align_cards()
+								play_sound('card1', 0.9, 0.6)
+								card_eval_status_text(speaker, 'extra', nil, nil, nil, {
+									message = localize('k_draw_ex'),
+									colour = G.ARGS.LOC_COLOURS.diamonds,
+									instant = true
+								})
+								return true
+							end
+						}))
 					end
-					G.zero_dragee_count = (G.zero_dragee_count or 0) + 1
-					SMODS.calculate_effect({
-						xmult = val
-					}, randomdraw)
-				end
-			}
+				}
+			end
 		end
 		if context.after and not context.blueprint then
 			G.dragee_sunsteels = {}
-			G.zero_dragee_count = 0
 		end
 	end,
 	enhancement_gate = "m_zero_sunsteel",
@@ -3881,39 +3880,36 @@ SMODS.Joker {
         return { vars = { localize(card.ability.extra.suit, 'suits_singular'), localize(card.ability.extra.suit, 'suits_plural'), colours = {G.C.SUITS[card.ability.extra.suit] } } }
     end,
 	calculate = function(self, card, context)
-		if context.blueprint then return end
-		local exists = false
-		for k, v in pairs(G.playing_cards) do
-			if v.zero_secret_bright and card.ability.extra.placed and card.ability.extra.placed == v.zero_secret_bright then
-				exists = true
-				break
+		if context.blueprint or context.check_enhancement then return end
+		if card.ability.extra.placed then
+			local exists = false
+			for k, v in pairs(G.playing_cards) do
+				if v.sort_id == card.ability.extra.placed then
+					exists = true
+					break
+				end
 			end
-		end
-		if exists == false then
-			card.ability.extra.placed = nil
+			if not exists then
+				card.ability.extra.placed = nil
+			end
 		end
 		if not card.ability.extra.placed then
 			local nonbrights = {}
-			local randomcard
 			for k, v in pairs(G.playing_cards) do
 				if v:is_suit(card.ability.extra.suit) == false then
 					nonbrights[#nonbrights + 1] = v
 				end
 			end
 			if #nonbrights > 0 then
-			local link = string.format( "%04d%04d%04d%04d", math.random(0, 9999), math.random(0, 9999), math.random(0, 9999), math.random(0, 9999) )
-				randomcard = pseudorandom_element(nonbrights, "found_a_star")
-				randomcard.zero_secret_bright = link
-				card.ability.extra.placed = link
-				--print(randomcard.config)
+				card.ability.extra.placed = pseudorandom_element(nonbrights, "found_a_star").sort_id
 			end
 		end
-		if context.individual and context.cardarea == G.play and context.other_card.zero_secret_bright and card.ability.extra.placed and card.ability.extra.placed == context.other_card.zero_secret_bright then
+		if context.individual and context.cardarea == G.play and card.ability.extra.placed and card.ability.extra.placed == context.other_card.sort_id then
             card.ability.extra.placed = nil
 			local found = context.other_card
 			G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.15,func = function() found:flip();play_sound('card1');found:juice_up(0.3, 0.3);return true end }))
 			G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.1,func = function() found:change_suit(card.ability.extra.suit);return true end }))
-			G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.15,func = function() found:flip();play_sound('tarot2', nil, 0.6);found:juice_up(0.3, 0.3);found.zero_secret_bright = nil;return true end }))
+			G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.15,func = function() found:flip();play_sound('tarot2', nil, 0.6);found:juice_up(0.3, 0.3);return true end }))
 			return {
                 message = localize('k_stage_clear_upper'),
 				sound = "zero_hoshisaga_chirin",
@@ -4814,6 +4810,7 @@ SMODS.Joker {
 
 SMODS.Joker {
     key = "miriam",
+    pools = { zero_VocalSynth = true },
 	atlas = "zero_jokers",
     pos = { x = 3, y = 9 },
     rarity = 1,
@@ -4853,6 +4850,7 @@ SMODS.Joker {
 
 SMODS.Joker {
     key = "lola",
+    pools = { zero_VocalSynth = true },
 	atlas = "zero_jokers",
     pos = { x = 4, y = 9 },
     rarity = 1,
@@ -4895,6 +4893,7 @@ SMODS.Joker {
 
 SMODS.Joker {
     key = "yixi",
+    pools = { zero_VocalSynth = true },
 	atlas = "zero_jokers_2",
     pos = { x = 0, y = 1 },
     rarity = 2,
@@ -4927,6 +4926,7 @@ SMODS.Joker {
 
 SMODS.Joker {
     key = "mai",
+    pools = { zero_VocalSynth = true },
 	atlas = "zero_jokers_2",
     pos = { x = 1, y = 1 },
     rarity = 2,
@@ -5037,70 +5037,6 @@ SMODS.Joker {
 		end
     end
 }
-
---spectrum-requiring jokers
-if next(SMODS.find_mod('SpectrumFramework')) then
-	SMODS.Joker {
-		key = "majesty_colors",
-		atlas = "zero_jokers",
-		pos = { x = 0, y = 9 },
-		rarity = 2,
-		blueprint_compat = true,
-		demicoloncompat = true,
-		cost = 5,
-		unlocked = true,
-		discovered = true,
-		config = { extra = { odds = 2 } },
-		loc_vars = function(self, info_queue, card)
-			return { vars = { card.ability.extra.odds, G.GAME.probabilities.normal } }
-		end,
-		calculate = function(self, card, context)
-			if ((context.before and next(context.poker_hands["spectrum_Spectrum"])) or context.forcetrigger) and #G.consumeables.cards + G.GAME.consumeable_buffer < G.consumeables.config.card_limit and pseudorandom('majesty_colors') < G.GAME.probabilities.normal / card.ability.extra.odds then
-				G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
-				G.E_MANAGER:add_event(Event({
-					func = (function()
-						SMODS.add_card({ set = 'Consumeables', area = G.consumeables, key_append = 'majesty_colors' })
-						G.GAME.consumeable_buffer = 0
-						return true
-					end)
-				}))
-				return {
-					message = localize('k_plus_consumeable'),
-				}
-			end
-		end,
-		in_pool = function()
-			return SPECF.spectrum_played()
-		end
-	}
-	
-	SMODS.Joker {
-		key = "group_photo",
-		atlas = "zero_jokers_2",
-		pos = { x = 7, y = 1 },
-		rarity = 2,
-		blueprint_compat = true,
-		demicoloncompat = false,
-		cost = 7,
-		pixel_size = { h = 95 / 1.2 },
-		unlocked = true,
-		discovered = true,
-		config = { extra = { xmult = 2 } },
-		loc_vars = function(self, info_queue, card)
-			return { vars = { card.ability.extra.xmult } }
-		end,
-		calculate = function(self, card, context)
-			if context.individual and context.cardarea == G.play and not context.end_of_round and context.other_card:is_face() and next(context.poker_hands["spectrum_Spectrum"]) then
-				return {
-					xmult = card.ability.extra.xmult
-				}
-			end
-		end,
-		in_pool = function()
-			return SPECF.spectrum_played()
-		end
-	}
-end
 
 SMODS.Joker {
 	key = "soda_shake",
@@ -5213,6 +5149,587 @@ SMODS.Joker {
 	end,
 }
 
+SMODS.Joker {
+	key = "vegemite",
+	atlas = "zero_jokers",
+	pos = { x = 6, y = 5 },
+	pixel_size = { w = 71, h = 78 },
+	rarity = 2,
+	blueprint_compat = true,
+	eternal_compat = false,
+	cost = 6,
+	pools = { Food = true },
+	unlocked = true,
+	discovered = true,
+	config = { extra = { mult = 20, mult_loss = 4 } },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.mult, card.ability.extra.mult_loss } }
+	end,
+	calculate = function(self, card, context)
+		if context.joker_main and card.ability.extra.mult > 0 then
+			return { mult = card.ability.extra.mult }
+		end
+		if context.end_of_round and context.game_over == false and context.main_eval and not context.blueprint then
+			local others = {}
+			for _, joker in ipairs(G.jokers.cards) do
+				if joker ~= card then others[#others + 1] = joker end
+			end
+			local loss = math.min(card.ability.extra.mult_loss, card.ability.extra.mult)
+			if #others > 0 then
+				local base = math.floor(loss / #others)
+				local leftover = loss - base * #others
+				for i, joker in ipairs(others) do
+					local share = base + (i <= leftover and 1 or 0)
+					if share > 0 then
+						joker.ability.zero_spread = (joker.ability.zero_spread or 0) + share
+						SMODS.calculate_effect({ message = localize({ type = 'variable', key = 'a_mult', vars = { share } }), colour = G.C.MULT }, joker)
+					end
+				end
+			end
+			card.ability.extra.mult = card.ability.extra.mult - loss
+			if card.ability.extra.mult <= 0 then
+				SMODS.destroy_cards(card, nil, nil, true)
+				return { message = localize('k_eaten_ex'), colour = G.C.FILTER }
+			end
+			return {
+				message = localize({ type = 'variable', key = 'a_mult_minus', vars = { card.ability.extra.mult_loss } }),
+				colour = G.C.MULT
+			}
+		end
+	end,
+}
+
+SMODS.Joker {
+	key = "hidden_anathema",
+	atlas = "zero_jokers",
+	pos = { x = 3, y = 6 },
+	rarity = 3,
+	blueprint_compat = true,
+	cost = 8,
+	unlocked = true,
+	discovered = true,
+	config = { extra = { xmult = 1, xmult_gain = 0.25 } },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xmult_gain, card.ability.extra.xmult } }
+	end,
+	calculate = function(self, card, context)
+		if context.joker_main and card.ability.extra.xmult > 1 then
+			return { xmult = card.ability.extra.xmult }
+		end
+	end,
+}
+
+SMODS.Joker {
+	key = "orange_flummery",
+	atlas = "zero_jokers",
+	pos = { x = 4, y = 5 },
+	rarity = 2,
+	blueprint_compat = false,
+	eternal_compat = false,
+	cost = 6,
+	pools = { Food = true },
+	unlocked = true,
+	discovered = true,
+	config = { extra = { limit = 3, limit_loss = 1 } },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.limit, card.ability.extra.limit_loss } }
+	end,
+	add_to_deck = function(self, card, from_debuff)
+		SMODS.change_play_limit(card.ability.extra.limit)
+		SMODS.change_discard_limit(card.ability.extra.limit)
+	end,
+	remove_from_deck = function(self, card, from_debuff)
+		SMODS.change_play_limit(-card.ability.extra.limit)
+		SMODS.change_discard_limit(-card.ability.extra.limit)
+	end,
+	calculate = function(self, card, context)
+		if context.end_of_round and context.game_over == false and context.main_eval and not context.blueprint then
+			if card.ability.extra.limit - card.ability.extra.limit_loss <= 0 then
+				SMODS.destroy_cards(card, nil, nil, true)
+				return { message = localize('k_eaten_ex'), colour = G.C.FILTER }
+			end
+			card.ability.extra.limit = card.ability.extra.limit - card.ability.extra.limit_loss
+			SMODS.change_play_limit(-card.ability.extra.limit_loss)
+			SMODS.change_discard_limit(-card.ability.extra.limit_loss)
+			return {
+				message = localize({ type = 'variable', key = 'zero_a_selection_minus', vars = { card.ability.extra.limit_loss } }),
+				colour = G.C.FILTER
+			}
+		end
+	end,
+}
+
+SMODS.Joker {
+	key = "ninezero",
+	pools = { zero_VocalSynth = true },
+	atlas = "zero_jokers_2",
+	pos = { x = 3, y = 2 },
+	rarity = 1,
+	blueprint_compat = true,
+	cost = 4,
+	unlocked = true,
+	discovered = true,
+	config = { extra = { chips = 9 } },
+	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue + 1] = { set = "Other", key = 'zero_ninezero_marvin' }
+		return { vars = { card.ability.extra.chips } }
+	end,
+	calculate = function(self, card, context)
+		if context.individual and context.cardarea == G.play and context.other_card:get_id() == 9 then
+			context.other_card.ability.perma_bonus = (context.other_card.ability.perma_bonus or 0) + card.ability.extra.chips
+			return {
+				message = localize('k_upgrade_ex'),
+				colour = G.C.CHIPS,
+				message_card = context.other_card
+			}
+		end
+	end,
+	pronouns = "he_him"
+}
+
+SMODS.Joker {
+	key = "marvin",
+	pools = { zero_VocalSynth = true },
+	atlas = "zero_jokers_2",
+	pos = { x = 6, y = 2 },
+	rarity = 1,
+	blueprint_compat = true,
+	cost = 4,
+	unlocked = true,
+	discovered = true,
+	config = { extra = { dollars = 2, chips = 9 } },
+	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue + 1] = { set = "Other", key = 'zero_ninezero_marvin' }
+		return { vars = { card.ability.extra.dollars } }
+	end,
+	calculate = function(self, card, context)
+		if context.discard and context.other_card:get_id() == 9 then
+			if next(SMODS.find_card('j_zero_ninezero')) and not context.blueprint then
+				context.other_card.ability.perma_bonus = (context.other_card.ability.perma_bonus or 0) + card.ability.extra.chips
+			end
+			return {
+				dollars = card.ability.extra.dollars
+			}
+		end
+	end,
+	pronouns = "he_him"
+}
+
+SMODS.Joker {
+	key = "aurielle",
+	pools = { zero_VocalSynth = true },
+	atlas = "zero_jokers_2",
+	pos = { x = 4, y = 2 },
+	rarity = 2,
+	blueprint_compat = true,
+	cost = 6,
+	unlocked = true,
+	discovered = true,
+	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue + 1] = G.P_CENTERS.m_gold
+		info_queue[#info_queue + 1] = { set = "Other", key = 'zero_aurielle_sylva', vars = { 1.5, 1 } }
+	end,
+	calculate = function(self, card, context)
+		if context.before then
+			local first = context.scoring_hand[1]
+			if first and first.config.center ~= G.P_CENTERS.m_gold then
+				first:set_ability(G.P_CENTERS.m_gold, nil, true)
+				G.E_MANAGER:add_event(Event({
+					func = function()
+						first:juice_up()
+						return true
+					end
+				}))
+				return {
+					message = localize('k_gold'),
+					colour = G.C.MONEY
+				}
+			end
+		end
+	end,
+	pronouns = "she_her"
+}
+
+SMODS.Joker {
+	key = "sylva",
+	pools = { zero_VocalSynth = true },
+	atlas = "zero_jokers_2",
+	pos = { x = 5, y = 2 },
+	rarity = 2,
+	blueprint_compat = true,
+	cost = 6,
+	unlocked = true,
+	discovered = true,
+	config = { extra = { xmult = 1.25, xmult_together = 1.5, dollars = 1 } },
+	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue + 1] = G.P_CENTERS.m_gold
+		info_queue[#info_queue + 1] = { set = "Other", key = 'zero_aurielle_sylva', vars = { card.ability.extra.xmult_together, card.ability.extra.dollars } }
+		return { vars = { card.ability.extra.xmult } }
+	end,
+	calculate = function(self, card, context)
+		if context.individual and context.cardarea == G.hand and SMODS.has_enhancement(context.other_card, 'm_gold') then
+			local together = next(SMODS.find_card('j_zero_aurielle'))
+			if context.end_of_round then
+				if together then
+					return {
+						dollars = card.ability.extra.dollars
+					}
+				end
+			else
+				return {
+					xmult = together and card.ability.extra.xmult_together or card.ability.extra.xmult
+				}
+			end
+		end
+	end,
+	pronouns = "she_they"
+}
+
+--spectrum-requiring jokers
+if next(SMODS.find_mod('SpectrumFramework')) then
+	SMODS.Joker {
+		key = "majesty_colors",
+		atlas = "zero_jokers",
+		pos = { x = 0, y = 9 },
+		rarity = 2,
+		blueprint_compat = true,
+		demicoloncompat = true,
+		cost = 5,
+		unlocked = true,
+		discovered = true,
+		config = { extra = { odds = 2 } },
+		loc_vars = function(self, info_queue, card)
+			return { vars = { card.ability.extra.odds, G.GAME.probabilities.normal } }
+		end,
+		calculate = function(self, card, context)
+			if ((context.before and next(context.poker_hands["spectrum_Spectrum"])) or context.forcetrigger) and #G.consumeables.cards + G.GAME.consumeable_buffer < G.consumeables.config.card_limit and pseudorandom('majesty_colors') < G.GAME.probabilities.normal / card.ability.extra.odds then
+				G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
+				G.E_MANAGER:add_event(Event({
+					func = (function()
+						SMODS.add_card({ set = 'Consumeables', area = G.consumeables, key_append = 'majesty_colors' })
+						G.GAME.consumeable_buffer = 0
+						return true
+					end)
+				}))
+				return {
+					message = localize('k_plus_consumeable'),
+				}
+			end
+		end,
+		in_pool = function()
+			return SPECF.spectrum_played()
+		end
+	}
+	
+	SMODS.Joker {
+		key = "group_photo",
+		atlas = "zero_jokers_2",
+		pos = { x = 7, y = 1 },
+		rarity = 2,
+		blueprint_compat = true,
+		demicoloncompat = false,
+		cost = 7,
+		pixel_size = { h = 95 / 1.2 },
+		unlocked = true,
+		discovered = true,
+		config = { extra = { xmult = 2 } },
+		loc_vars = function(self, info_queue, card)
+			return { vars = { card.ability.extra.xmult } }
+		end,
+		calculate = function(self, card, context)
+			if context.individual and context.cardarea == G.play and not context.end_of_round and context.other_card:is_face() and next(context.poker_hands["spectrum_Spectrum"]) then
+				return {
+					xmult = card.ability.extra.xmult
+				}
+			end
+		end,
+		in_pool = function()
+			return SPECF.spectrum_played()
+		end
+	}
+
+	local zero_ttjs_area
+
+	local function zero_ttjs_draw(self, layer)
+		if layer == 'shadow' or not self.states.visible then return end
+		local colour = G.C.SUITS[self.zero_suit] or G.C.WHITE
+		local T = self.VT
+		local unit = G.TILESCALE * G.TILESIZE
+		local w, h = T.w * unit, T.h * unit
+		love.graphics.push()
+		love.graphics.translate(T.x * unit + w * 0.5, T.y * unit + h * 0.5)
+		love.graphics.rotate(T.r)
+		love.graphics.translate(-w * 0.5, -h * 0.5)
+		love.graphics.setColor(colour[1] * 0.55, colour[2] * 0.55, colour[3] * 0.55, 1)
+		love.graphics.rectangle('fill', 0, 0, w, h, w * 0.1, w * 0.1)
+		love.graphics.setColor(colour[1], colour[2], colour[3], 1)
+		love.graphics.rectangle('fill', w * 0.05, w * 0.05, w * 0.9, h - w * 0.1, w * 0.07, w * 0.07)
+		love.graphics.setColor(1, 1, 1, 0.9)
+		love.graphics.circle('fill', w * 0.5, h * 0.5, w * 0.34)
+		love.graphics.pop()
+		local icon = self.zero_icon
+		if icon then
+			local size = T.w * 0.5
+			icon.T.w, icon.T.h = size, size
+			icon.T.x, icon.T.y = T.x + (T.w - size) / 2, T.y + (T.h - size) / 2
+			icon.T.r = T.r
+			icon.VT.w, icon.VT.h = size, size
+			icon.VT.x, icon.VT.y = icon.T.x, icon.T.y
+			icon.VT.r = T.r
+			icon:draw_self()
+		end
+	end
+
+	local function zero_ttjs_icon(suit)
+		local def = SMODS.Suits[suit]
+		local setting = G.SETTINGS.colour_palettes[suit]
+		local high = setting == 'hc' or (setting ~= 'lc' and G.SETTINGS.colourblind_option)
+		local atlas = SMODS.get_atlas(high and def.hc_ui_atlas or def.lc_ui_atlas) or SMODS.get_atlas(high and 'ui_2' or 'ui_1')
+		local icon = SMODS.create_sprite(0, 0, 0.3, 0.3, atlas, def.ui_pos)
+		icon.states.drag.can = false
+		icon.states.hover.can = false
+		icon.states.collide.can = false
+		return icon
+	end
+
+	local function zero_ttjs_clear()
+		if zero_ttjs_area then
+			for _, note in ipairs(zero_ttjs_area.cards) do
+				if note.zero_icon then note.zero_icon:remove() end
+			end
+			zero_ttjs_area:remove()
+			zero_ttjs_area = nil
+		end
+	end
+
+	local function zero_ttjs_show(chart)
+		zero_ttjs_clear()
+		local w, h = G.CARD_W * 0.6, G.CARD_H * 0.6
+		local area_w = w * #chart + 0.2 * (#chart - 1)
+		zero_ttjs_area = CardArea(
+			G.play.T.x + G.play.T.w / 2 - area_w / 2, G.play.T.y - h - 0.4,
+			area_w, h,
+			{ card_limit = #chart, type = 'title', highlight_limit = 0 }
+		)
+		zero_ttjs_area.zero_chart = chart
+		for _, suit in ipairs(chart) do
+			local note = Card(zero_ttjs_area.T.x, zero_ttjs_area.T.y, w, h, G.P_CARDS[SMODS.Suits[suit].card_key .. '_A'], G.P_CENTERS.c_base, { bypass_discovery_center = true, bypass_discovery_ui = true })
+			note.zero_suit = suit
+			note.zero_icon = zero_ttjs_icon(suit)
+			note.draw = zero_ttjs_draw
+			zero_ttjs_area:emplace(note)
+		end
+		for _, note in ipairs(zero_ttjs_area.cards) do
+			note.states.collide.can = false
+			note.states.drag.can = false
+			note.states.hover.can = false
+		end
+	end
+
+	local function zero_ttjs_sync()
+		local chart = G.GAME and G.GAME.zero_ttjs_chart
+		local show = chart and G.STATE == G.STATES.SELECTING_HAND
+		if show and (not zero_ttjs_area or zero_ttjs_area.zero_chart ~= chart) then
+			zero_ttjs_show(chart)
+		elseif not show and zero_ttjs_area then
+			zero_ttjs_clear()
+		end
+	end
+
+	local function zero_ttjs_new_chart()
+		local limit = G.hand.config.highlighted_limit
+		local present, suits = {}, {}
+		for _, playing_card in ipairs(G.playing_cards) do
+			local suit = playing_card.base.suit
+			if suit and not present[suit] and not SMODS.has_no_suit(playing_card) and not SMODS.has_any_suit(playing_card) then
+				present[suit] = true
+				suits[#suits + 1] = suit
+			end
+		end
+		if #suits < 5 then
+			local pool = SPECF.in_pool_suits()
+			local extra, fallback = {}, {}
+			for _, suit in ipairs(SMODS.Suit.obj_buffer) do
+				if not present[suit] then
+					fallback[#fallback + 1] = suit
+					if pool[suit] then extra[#extra + 1] = suit end
+				end
+			end
+			pseudoshuffle(extra, pseudoseed('zero_ttjs_extra'))
+			pseudoshuffle(fallback, pseudoseed('zero_ttjs_fallback'))
+			for _, source in ipairs({ extra, fallback }) do
+				for _, suit in ipairs(source) do
+					if #suits >= 5 then break end
+					if not present[suit] then
+						present[suit] = true
+						suits[#suits + 1] = suit
+					end
+				end
+			end
+		end
+		pseudoshuffle(suits, pseudoseed('zero_ttjs_suits'))
+		local band = {}
+		for i = 1, math.min(5, #suits) do band[i] = suits[i] end
+		local chart = {}
+		for i = 1, math.min(limit, #band) do chart[i] = band[i] end
+		while #chart < limit and #band > 0 do
+			chart[#chart + 1] = pseudorandom_element(band, pseudoseed('zero_ttjs_fill'))
+		end
+		pseudoshuffle(chart, pseudoseed('zero_ttjs_order'))
+		G.GAME.zero_ttjs_chart = chart
+		G.GAME.zero_ttjs_stale = nil
+	end
+
+	local function zero_ttjs_hit(full_hand)
+		local chart = G.GAME.zero_ttjs_chart
+		if not chart or #full_hand ~= #chart then return false end
+		for i, played in ipairs(full_hand) do
+			if not played:is_suit(chart[i]) then return false end
+		end
+		return true
+	end
+
+	SMODS.Joker {
+		key = "through_jokers_spades",
+		atlas = "zero_jokers_2",
+		pos = { x = 3, y = 1 },
+		rarity = 3,
+		blueprint_compat = true,
+		cost = 8,
+		unlocked = true,
+		discovered = true,
+		config = { extra = { chips = 20, xchips = 2, streak = 1, max_streak = 5 } },
+		loc_vars = function(self, info_queue, card)
+			return { vars = { card.ability.extra.chips, card.ability.extra.xchips, math.max(1, card.ability.extra.xchips * (card.ability.extra.streak - 1)), card.ability.extra.xchips * (card.ability.extra.max_streak - 1) } }
+		end,
+		calculate = function(self, card, context)
+			if context.individual and context.cardarea == G.play and G.GAME.zero_ttjs_chart then
+				for i, played in ipairs(context.full_hand) do
+					if played == context.other_card then
+						if G.GAME.zero_ttjs_chart[i] and played:is_suit(G.GAME.zero_ttjs_chart[i]) then
+							local effect = { chips = card.ability.extra.chips }
+							if not context.blueprint and card.ability.extra.hit and not card.ability.extra.up_shown and context.scoring_hand[#context.scoring_hand] == played then
+								card.ability.extra.up_shown = true
+								effect.extra = { message = localize({ type = 'variable', key = 'zero_ttjs_streak', vars = { card.ability.extra.xchips * (card.ability.extra.streak - 1) } }), colour = G.C.ORANGE, message_card = played }
+							end
+							return effect
+						end
+						if not context.blueprint then card.ability.extra.miss_shown = true end
+						return { message = localize('k_zero_miss_ex'), colour = G.C.RED, message_card = played }
+					end
+				end
+			end
+			if context.joker_main and card.ability.extra.hit then
+				return { xchips = card.ability.extra.xchips * (card.ability.extra.streak - 1) }
+			end
+			if context.blueprint then return end
+			if context.setting_blind then
+				G.GAME.zero_ttjs_stale = true
+			end
+			if context.hand_drawn and (G.GAME.zero_ttjs_stale or not G.GAME.zero_ttjs_chart or #G.GAME.zero_ttjs_chart ~= G.hand.config.highlighted_limit) then
+				zero_ttjs_new_chart()
+			end
+			if context.before then
+				card.ability.extra.miss_shown = nil
+				card.ability.extra.up_shown = nil
+				card.ability.extra.hit = zero_ttjs_hit(context.full_hand)
+				if card.ability.extra.hit then
+					card.ability.extra.streak = math.min(card.ability.extra.max_streak, card.ability.extra.streak + 1)
+				elseif card.ability.extra.streak > 1 then
+					card.ability.extra.streak = 1
+					card.ability.extra.pending = 'miss'
+				end
+			end
+			if context.after then
+				G.GAME.zero_ttjs_stale = true
+				local pending = card.ability.extra.pending
+				card.ability.extra.pending = nil
+				if pending == 'miss' and not card.ability.extra.miss_shown then
+					return { message = localize('k_zero_miss_ex'), colour = G.C.RED }
+				end
+			end
+			if context.end_of_round and context.main_eval then
+				card.ability.extra.hit = nil
+				G.GAME.zero_ttjs_chart = nil
+			end
+		end,
+		update = function(self, card, dt)
+			if card.area == G.jokers then
+				zero_ttjs_sync()
+			end
+		end,
+		remove_from_deck = function(self, card, from_debuff)
+			for _, other in ipairs(SMODS.find_card('j_zero_through_jokers_spades', true)) do
+				if other ~= card then return end
+			end
+			G.GAME.zero_ttjs_chart = nil
+			zero_ttjs_clear()
+		end,
+		in_pool = function()
+			return SPECF.spectrum_played()
+		end
+	}
+end
+
+--miscellaneous crossmod jokers
+if next(SMODS.find_mod('partner')) then
+	local old_calculate_partner = Card.calculate_partner
+	function Card:calculate_partner(context)
+		local ret = old_calculate_partner(self, context)
+		if ret and context and not context.zero_partner_triggered and G.GAME.blind and G.GAME.blind.in_blind then
+			SMODS.calculate_context({ zero_partner_triggered = true, partner_card = self })
+		end
+		return ret
+	end
+	
+	SMODS.Joker {
+		key = "emotional_support",
+		atlas = "zero_jokers",
+		pos = { x = 5, y = 1 },
+		pixel_size = { w = 44, h = 53 },
+		rarity = 2,
+		blueprint_compat = true,
+		cost = 6,
+		unlocked = true,
+		discovered = true,
+		config = { extra = { percent = 10 } },
+		in_pool = function(self, args)
+			return G.GAME.selected_partner_card ~= nil
+		end,
+		loc_vars = function(self, info_queue, card)
+			return { vars = { card.ability.extra.percent } }
+		end,
+		calculate = function(self, card, context)
+			if context.zero_partner_triggered then
+				local percent = card.ability.extra.percent
+				G.E_MANAGER:add_event(Event({
+					trigger = 'after',
+					delay = 0.1,
+					func = function()
+						if not G.GAME.blind or not G.GAME.blind.in_blind then return true end
+						G.GAME.blind.chips = math.max(1, math.floor(G.GAME.blind.chips * (100 - percent) / 100))
+						G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
+						G.FUNCS.blind_chip_UI_scale(G.hand_text_area.blind_chips)
+						G.HUD_blind:recalculate()
+						G.hand_text_area.blind_chips:juice_up()
+						play_sound('chips2')
+						if G.STATE == G.STATES.SELECTING_HAND and G.GAME.chips >= G.GAME.blind.chips and not next(SMODS.find_mod("NotJustYet")) then
+							G.STATE = G.STATES.HAND_PLAYED
+							G.STATE_COMPLETE = true
+							end_round()
+						end
+						return true
+					end
+				}))
+				return {
+					message = "-" .. percent .. "%",
+					colour = G.C.RED
+				}
+			end
+		end
+	}
+end
+
 --keep legendary and patron jokers last
 SMODS.Joker {
     key = "missingno",
@@ -5242,6 +5759,39 @@ SMODS.Joker {
 	pools = { zero_Glitch = true },
 	pronouns = "empty"
 }
+
+SMODS.Joker {
+    key = "evil_notmario",
+	atlas = "zero_jokers",
+    pos = { x = 3, y = 2 },
+	soul_pos = { x = 3, y = 3 },
+    rarity = 4,
+    blueprint_compat = true,
+    cost = 20,
+	unlocked = true,
+	discovered = true,
+	config = { extra = { xchips = 4 } },
+	loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.xchips } }
+    end,
+	calculate = function(self, card, context)
+		if context.individual and context.cardarea == G.play and context.scoring_name == "Four of a Kind" then
+			return {
+				xchips = card.ability.extra.xchips
+			}
+		end
+	end
+}
+
+function zero_zhorie_sweep(cards)
+	if not cards or not next(SMODS.find_card('j_zero_vonllery')) then return end
+	for _, v in pairs(cards) do
+		if not v.edition and v:is_suit("Diamonds", true) then
+			v:set_edition({negative = true}, true)
+			v.zhorie = true
+		end
+	end
+end
 
 SMODS.Joker {
     key = "vonllery",
@@ -5299,11 +5849,14 @@ SMODS.Joker {
 		if context.blueprint then return end
 		if context.playing_card_added and context.cards then
 			for _, v in pairs(context.cards) do
-				if v:is_suit("Diamonds") and not (card.edition and card.edition.negative) then
+				if v:is_suit("Diamonds", true) and not (v.edition and v.edition.negative) then
 					v:set_edition({negative = true})
 					v.zhorie = true
 				end
 			end
+		end
+		if context.setting_blind or context.hand_drawn then
+			zero_zhorie_sweep(G.playing_cards)
 		end
 		if (context.change_suit and (context.new_suit == 'Diamonds' or context.new_suit == 'zero_Brights')) or (context.setting_ability and G.P_CENTERS[context.new].key == "m_wild") then
 			if not (context.other_card.edition and context.other_card.edition.negative) then
@@ -5389,10 +5942,12 @@ SMODS.Joker {
         return { vars = { colours = {G.C.SUITS.zero_Brights} } }
     end,
 	add_to_deck = function(self, card, from_debuff)
+		if from_debuff then return end
+		local added = {}
 		for _, v in pairs({'A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'}) do
-			SMODS.add_card { set = "Base", area = G.play, rank = v, suit = "zero_Brights" }
+			added[#added + 1] = SMODS.add_card { set = "Base", area = G.play, rank = v, suit = "zero_Brights" }
 		end
-		for _, v in pairs(G.play.cards) do
+		for _, v in ipairs(added) do
 			G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.05, func = function()
 				draw_card(G.play, G.deck, nil, nil, nil, v)
 				G.deck:shuffle()
@@ -5792,7 +6347,7 @@ SMODS.Joker {
 		if G.GAME.modifiers.no_interest then return end
 		local over_cap = math.floor(G.GAME.dollars / 5) - G.GAME.interest_cap / 5
 		if over_cap > 0 then
-			return G.GAME.interest_amount * over_cap
+			return G.GAME.interest_amount * over_cap, { text = localize('k_zero_conlasse_payout') }
 		end
 	end,
 	check_for_unlock = function(self, args)
@@ -5803,4 +6358,513 @@ SMODS.Joker {
 		end
 	end,
 	pronouns = "she_her"
+}
+
+local function zero_ivan_clear_areas()
+	if G.zero_ivan_areas then
+		for _, area in ipairs(G.zero_ivan_areas) do
+			area:remove()
+		end
+		G.zero_ivan_areas = nil
+	end
+end
+
+local ivan_exit_overlay = G.FUNCS.exit_overlay_menu
+G.FUNCS.exit_overlay_menu = function(...)
+	zero_ivan_clear_areas()
+	return ivan_exit_overlay(...)
+end
+
+local function zero_ivan_button(label, func, ref, colour)
+	return {
+		n = G.UIT.C,
+		config = { ref_table = ref, align = "cm", padding = 0.08, minw = 0.5, r = 0.08, hover = true, shadow = true, colour = colour, button = func },
+		nodes = {
+			{ n = G.UIT.T, config = { text = label, colour = G.C.UI.TEXT_LIGHT, scale = 0.35, shadow = true } }
+		}
+	}
+end
+
+G.FUNCS.zero_ivan_scroll = function(e)
+	local ivan = e.config.ref_table
+	local lines = ivan.ability.immutable.copied_jokers
+	local ink = HEX("3B2A1A")
+	zero_ivan_clear_areas()
+	G.zero_ivan_areas = {}
+
+	local columns = {}
+	for i = 1, ivan.ability.extra.lines do
+		local src = lines[i]
+		local rows = {}
+		if src then
+			local area = CardArea(0, 0, G.CARD_W * 0.95, G.CARD_H * 0.95,
+				{ card_limit = 1, type = "title", highlight_limit = 0 })
+			G.zero_ivan_areas[#G.zero_ivan_areas + 1] = area
+			local sx, sy = src.T.x, src.T.y
+			src.T.x, src.T.y = 0, 0
+			local c = copy_card(src)
+			src.T.x, src.T.y = sx, sy
+			c.T.x, c.T.y = area.T.x, area.T.y
+			c.VT.x, c.VT.y = area.T.x, area.T.y
+			c.states.drag.can = false
+			area:emplace(c)
+
+			local buttons = {}
+			if i > 1 then
+				buttons[#buttons + 1] = zero_ivan_button("<", "zero_ivan_shift", { ivan = ivan, index = i, step = -1 }, G.C.BLUE)
+			end
+			buttons[#buttons + 1] = zero_ivan_button(localize("b_zero_erase"), "zero_ivan_erase", { ivan = ivan, index = i }, G.C.RED)
+			if i < #lines then
+				buttons[#buttons + 1] = zero_ivan_button(">", "zero_ivan_shift", { ivan = ivan, index = i, step = 1 }, G.C.BLUE)
+			end
+
+			rows[1] = { n = G.UIT.R, config = { align = "cm", padding = 0.05 }, nodes = {
+				{ n = G.UIT.O, config = { object = area } }
+			} }
+			rows[2] = { n = G.UIT.R, config = { align = "cm", padding = 0.05, maxw = G.CARD_W * 0.95 }, nodes = {
+				{ n = G.UIT.T, config = { text = localize({ type = "name_text", key = src.config.center.key, set = "Joker" }), scale = 0.35, colour = ink, maxw = G.CARD_W * 0.95 } }
+			} }
+			rows[3] = { n = G.UIT.R, config = { align = "cm", padding = 0.05 }, nodes = buttons }
+		else
+			rows[1] = { n = G.UIT.R, config = { align = "cm", padding = 0.05 }, nodes = {
+				{ n = G.UIT.C, config = { align = "cm", minw = G.CARD_W * 0.95, minh = G.CARD_H * 0.95, r = 0.1, colour = { 0, 0, 0, 0.12 } }, nodes = {
+					{ n = G.UIT.T, config = { text = localize("k_zero_scroll_blank"), scale = 0.4, colour = { ink[1], ink[2], ink[3], 0.5 } } }
+				} }
+			} }
+		end
+		columns[#columns + 1] = { n = G.UIT.C, config = { align = "tm", padding = 0.12 }, nodes = rows }
+	end
+
+	G.SETTINGS.paused = true
+	G.FUNCS.overlay_menu({
+		definition = create_UIBox_generic_options({
+			colour = HEX("D9C79A"),
+			outline_colour = HEX("8A6A3C"),
+			contents = {
+				{ n = G.UIT.R, config = { align = "cm", padding = 0.05 }, nodes = {
+					{ n = G.UIT.T, config = { text = localize("k_zero_scroll_title"), scale = 0.6, colour = ink } }
+				} },
+				{ n = G.UIT.R, config = { align = "cm", padding = 0.1 }, nodes = columns },
+			}
+		})
+	})
+end
+
+G.FUNCS.zero_ivan_shift = function(e)
+	local ref = e.config.ref_table
+	local lines = ref.ivan.ability.immutable.copied_jokers
+	local target = ref.index + ref.step
+	if lines[target] then
+		lines[ref.index], lines[target] = lines[target], lines[ref.index]
+	end
+	G.FUNCS.zero_ivan_scroll({ config = { ref_table = ref.ivan } })
+end
+
+G.FUNCS.zero_ivan_erase = function(e)
+	local ref = e.config.ref_table
+	local erased = table.remove(ref.ivan.ability.immutable.copied_jokers, ref.index)
+	if erased then
+		erased:remove()
+	end
+	play_sound('paper1', 0.9 + math.random() * 0.2)
+	G.FUNCS.zero_ivan_scroll({ config = { ref_table = ref.ivan } })
+end
+
+SMODS.Joker {
+	key = "ivan",
+	atlas = "zero_patrons",
+	pos = { x = 1, y = 2 },
+	soul_pos = { x = 1, y = 3 },
+	rarity = "zero_patron",
+	cost = 20,
+	unlocked = false,
+	blueprint_compat = true,
+	zero_view_button = { button = "zero_ivan_scroll", label = "b_zero_scroll" },
+	config = { extra = { lines = 3 }, immutable = { copied_jokers = {} } },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.lines, #card.ability.immutable.copied_jokers } }
+	end,
+	calculate = function(self, card, context)
+		if context.blueprint then
+			for _, copier in ipairs(context.blueprint_copiers_stack or {}) do
+				if copier == card then return end
+			end
+		end
+		local lines = card.ability.immutable.copied_jokers
+		local returns = {}
+		for _, copied in ipairs(lines) do
+			returns[#returns + 1] = SMODS.blueprint_effect(card, copied, context)
+		end
+		if not context.blueprint and context.end_of_round and context.game_over == false and context.main_eval and #lines < card.ability.extra.lines then
+			local written = {}
+			for _, line in ipairs(lines) do
+				written[line.config.center.key] = true
+			end
+			local pool = {}
+			for _, joker in ipairs(G.jokers.cards) do
+				if joker ~= card and joker.config.center.blueprint_compat and not written[joker.config.center.key] then
+					pool[#pool + 1] = joker
+				end
+			end
+			if #pool > 0 then
+				local copied = copy_card((pseudorandom_element(pool, pseudoseed('zero_ivan'))))
+				copied.T.x = -1000
+				copied.T.y = -1000
+				copied.VT.x = -1000
+				copied.VT.y = -1000
+				lines[#lines + 1] = copied
+				returns[#returns + 1] = { message = localize('k_zero_written_ex'), colour = G.C.GREEN, card = card }
+			end
+		end
+		return SMODS.merge_effects(returns)
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_dont_forget_me" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "it_they"
+}
+
+
+SMODS.Joker {
+	key = "reffa",
+	atlas = "zero_patrons",
+	pos = { x = 2, y = 2 },
+	soul_pos = { x = 2, y = 3 },
+	rarity = "zero_patron",
+	blueprint_compat = true,
+	cost = 20,
+	unlocked = false,
+	config = { extra = { xmult = 1, xmult_gain = 0.1 } },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xmult_gain, card.ability.extra.xmult } }
+	end,
+	calculate = function(self, card, context)
+		if not context.blueprint then
+			if context.end_of_round and context.game_over == false and context.main_eval then
+				local dreams = G.GAME.current_round.hands_left + G.GAME.current_round.discards_left
+				if dreams > 0 then
+					card.ability.extra.xmult = card.ability.extra.xmult + card.ability.extra.xmult_gain * dreams
+					return {
+						message = localize('k_upgrade_ex'),
+						colour = G.C.MULT
+					}
+				end
+			elseif context.skip_blind then
+				card.ability.extra.xmult_gain = card.ability.extra.xmult_gain * 2
+				return {
+					message = localize('k_upgrade_ex'),
+					colour = G.C.MULT
+				}
+			end
+		end
+		if context.joker_main then
+			return {
+				xmult = card.ability.extra.xmult
+			}
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_lotus_eater" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "she_any"
+}
+
+
+local function zero_egeo_orbit(card, shift)
+	local cards = G.jokers.cards
+	local others = {}
+	for _, joker in ipairs(cards) do
+		if joker ~= card then
+			others[#others + 1] = joker
+		end
+	end
+	if #others == 0 then return false end
+	if shift then
+		table.insert(others, 1, table.remove(others))
+	end
+	local slot = math.ceil((#others + 1) / 2)
+	local changed = shift or cards[slot] ~= card
+	if not changed then return false end
+	table.insert(others, slot, card)
+	for i = 1, #others do
+		cards[i] = others[i]
+	end
+	G.jokers:set_ranks()
+	return true
+end
+
+SMODS.Joker {
+	key = "egeo",
+	atlas = "zero_patrons",
+	pos = { x = 3, y = 2 },
+	soul_pos = { x = 3, y = 3 },
+	rarity = "zero_patron",
+	blueprint_compat = false,
+	cost = 20,
+	unlocked = false,
+	config = { extra = { xmult = 1, xmult_gain = 0.25, best = 0 } },
+	loc_vars = function(self, info_queue, card)
+		local best = G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand and G.GAME.round_scores.hand.amt or 0
+		return { vars = { card.ability.extra.xmult_gain, card.ability.extra.xmult, number_format(best) } }
+	end,
+	in_pool = function(self, args)
+		return not next(SMODS.find_card('j_zero_egeo'))
+	end,
+	add_to_deck = function(self, card, from_debuff)
+		if from_debuff then return end
+		for _, joker in ipairs(SMODS.find_card('j_zero_egeo')) do
+			if joker ~= card then
+				G.E_MANAGER:add_event(Event({
+					func = function()
+						if not card.REMOVED and not card.getting_sliced then
+							card.getting_sliced = true
+							card:start_dissolve()
+						end
+						return true
+					end
+				}))
+				break
+			end
+		end
+	end,
+	update = function(self, card, dt)
+		if card.area == G.jokers and not card.REMOVED and not (G.CONTROLLER and G.CONTROLLER.dragging.target)
+			and #G.jokers.cards > 1 and SMODS.find_card('j_zero_egeo')[1] == card then
+			zero_egeo_orbit(card, false)
+		end
+	end,
+	calculate = function(self, card, context)
+		if context.before and not context.blueprint then
+			card.ability.extra.best = G.GAME.round_scores.hand.amt
+		end
+		if context.joker_main then
+			return {
+				xmult = card.ability.extra.xmult
+			}
+		end
+		if context.after and not context.blueprint then
+			local ret
+			if G.GAME.round_scores.hand.amt > card.ability.extra.best then
+				card.ability.extra.xmult = card.ability.extra.xmult + card.ability.extra.xmult_gain
+				ret = {
+					message = localize('k_upgrade_ex'),
+					colour = G.C.MULT
+				}
+			end
+			if card.area == G.jokers and SMODS.find_card('j_zero_egeo')[1] == card then
+				G.E_MANAGER:add_event(Event({
+					func = function()
+						if zero_egeo_orbit(card, true) then
+							card:juice_up(0.3, 0.3)
+							play_sound('cardSlide1')
+						end
+						return true
+					end
+				}))
+			end
+			return ret
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_world_revolving" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "any_all"
+}
+
+
+SMODS.Joker {
+	key = "orched",
+	atlas = "zero_patrons",
+	pos = { x = 0, y = 4 },
+	soul_pos = { x = 0, y = 5 },
+	rarity = "zero_patron",
+	blueprint_compat = true,
+	cost = 20,
+	unlocked = false,
+	config = { extra = { xmult = 1.2, suit = 'Hearts' } },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xmult, localize(card.ability.extra.suit, 'suits_plural'), colours = { G.C.SUITS[card.ability.extra.suit] } } }
+	end,
+	set_sprites = function(self, card, front)
+		if card.children.floating_sprite and zero_config.sfw_orched then
+			card.children.floating_sprite:set_sprite_pos({ x = 1, y = 5 })
+		end
+	end,
+	calculate = function(self, card, context)
+		local suit = card.ability.extra.suit
+		if context.individual and context.cardarea == G.play and context.other_card:is_suit(suit) then
+			local targets = {}
+			for _, held in ipairs(G.hand.cards) do
+				if not held:is_suit(suit) and not SMODS.has_no_suit(held) then
+					targets[#targets + 1] = held
+				end
+			end
+			if #targets > 0 then
+				local target = pseudorandom_element(targets, pseudoseed('zero_orched'))
+				SMODS.change_base(target, suit, nil, true)
+				G.E_MANAGER:add_event(Event({ trigger = 'after', delay = 0.1, func = function() target:flip(); play_sound('card1', 1); target:juice_up(0.3, 0.3) return true end }))
+				G.E_MANAGER:add_event(Event({ trigger = 'after', delay = 0.1, func = function() target:set_sprites(target.config.center, target.config.card) return true end }))
+				G.E_MANAGER:add_event(Event({ trigger = 'after', delay = 0.1, func = function() target:flip(); play_sound('tarot2', 1); target:juice_up(0.3, 0.3) return true end }))
+				return {
+					message = localize('k_zero_seduced_ex'),
+					colour = G.C.SUITS[suit],
+					message_card = target
+				}
+			end
+		end
+		if context.individual and context.cardarea == G.hand and not context.end_of_round and context.other_card:is_suit(suit) then
+			if context.other_card.debuff then
+				return {
+					message = localize('k_debuffed'),
+					colour = G.C.RED
+				}
+			end
+			return {
+				xmult = card.ability.extra.xmult
+			}
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_love_me_forever" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "any_all"
+}
+
+
+local zero_kana_sins = { "wrath", "greed", "gluttony", "lust", "envy", "sloth", "pride" }
+
+local function zero_kana_roll_sin(card)
+	local options = {}
+	for _, sin in ipairs(zero_kana_sins) do
+		if sin ~= card.ability.extra.sin then
+			options[#options + 1] = sin
+		end
+	end
+	card.ability.extra.sin = pseudorandom_element(options, pseudoseed('zero_kana_sin'))
+end
+
+SMODS.Joker {
+	key = "kana",
+	atlas = "zero_patrons",
+	pos = { x = 2, y = 4 },
+	soul_pos = { x = 2, y = 5 },
+	rarity = "zero_patron",
+	blueprint_compat = true,
+	cost = 20,
+	unlocked = false,
+	config = { extra = { sin = "wrath", suit = "zero_Brights", xmult = 1.5, dollars = 2, odds = 4, chips = 10 } },
+	loc_vars = function(self, info_queue, card)
+		local extra = card.ability.extra
+		local colours = { G.C.SUITS[extra.suit] }
+		local numerator, denominator = SMODS.get_probability_vars(card, 1, extra.odds, 'zero_kana')
+		info_queue[#info_queue + 1] = { set = "Other", key = "zero_kana_" .. extra.sin, vars = { extra.xmult, extra.dollars, numerator, denominator, extra.chips, colours = colours } }
+		return { vars = { localize(extra.suit, 'suits_plural'), localize('k_zero_sin_' .. extra.sin), colours = colours } }
+	end,
+	add_to_deck = function(self, card, from_debuff)
+		if not from_debuff then
+			zero_kana_roll_sin(card)
+		end
+	end,
+	calculate = function(self, card, context)
+		local extra = card.ability.extra
+		local sin = extra.sin
+		if context.end_of_round and context.game_over == false and context.main_eval and not context.blueprint then
+			zero_kana_roll_sin(card)
+			return {
+				message = localize('k_zero_sin_' .. extra.sin),
+				colour = G.C.PATRON
+			}
+		end
+		if sin == "envy" and context.repetition and context.cardarea == G.play and context.other_card:is_suit(extra.suit) then
+			return {
+				repetitions = 1
+			}
+		end
+		if sin == "sloth" and context.individual and context.cardarea == G.hand and not context.end_of_round and context.other_card:is_suit(extra.suit) then
+			if context.other_card.debuff then
+				return {
+					message = localize('k_debuffed'),
+					colour = G.C.RED
+				}
+			end
+			return {
+				xmult = extra.xmult
+			}
+		end
+		if context.individual and context.cardarea == G.play and context.other_card:is_suit(extra.suit) then
+			if sin == "wrath" then
+				return {
+					xmult = extra.xmult
+				}
+			elseif sin == "greed" then
+				return {
+					dollars = extra.dollars
+				}
+			elseif sin == "gluttony" then
+				if SMODS.pseudorandom_probability(card, 'zero_kana', 1, extra.odds, 'zero_kana') then
+					G.E_MANAGER:add_event(Event({
+						func = function()
+							SMODS.add_card({ set = 'Food', area = G.jokers, edition = 'e_negative', key_append = 'zero_kana' })
+							return true
+						end
+					}))
+					return {
+						message = localize('k_plus_joker'),
+						colour = G.C.BLUE,
+						message_card = context.blueprint_card or card
+					}
+				end
+			elseif sin == "lust" then
+				local targets = {}
+				for _, held in ipairs(G.hand.cards) do
+					if not held:is_suit(extra.suit) and not SMODS.has_no_suit(held) then
+						targets[#targets + 1] = held
+					end
+				end
+				if #targets > 0 then
+					local target = pseudorandom_element(targets, pseudoseed('zero_kana_lust'))
+					SMODS.change_base(target, extra.suit, nil, true)
+					G.E_MANAGER:add_event(Event({ trigger = 'after', delay = 0.1, func = function() target:flip(); play_sound('card1', 1); target:juice_up(0.3, 0.3) return true end }))
+					G.E_MANAGER:add_event(Event({ trigger = 'after', delay = 0.1, func = function() target:set_sprites(target.config.center, target.config.card) return true end }))
+					G.E_MANAGER:add_event(Event({ trigger = 'after', delay = 0.1, func = function() target:flip(); play_sound('tarot2', 1); target:juice_up(0.3, 0.3) return true end }))
+					return {
+						message = localize('k_zero_seduced_ex'),
+						colour = G.C.SUITS[extra.suit],
+						message_card = target
+					}
+				end
+			elseif sin == "pride" then
+				context.other_card.ability.perma_bonus = (context.other_card.ability.perma_bonus or 0) + extra.chips
+				return {
+					message = localize('k_upgrade_ex'),
+					colour = G.C.CHIPS,
+					message_card = context.other_card
+				}
+			end
+		end
+	end,
+	check_for_unlock = function(self, args)
+		if args.type == 'win_challenge' and G.GAME.challenge == "c_zero_50000_shades_of_grey" then
+			self.challenge_bypass = true
+			unlock_card(self)
+			discover_card(self)
+		end
+	end,
+	pronouns = "they_he"
 }
